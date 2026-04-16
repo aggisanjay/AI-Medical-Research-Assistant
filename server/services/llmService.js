@@ -652,7 +652,4 @@ Keep response concise but thorough. Use markdown formatting.`;
 }
 
 module.exports = new LLMService();
-  }
-}
-
-module.exports = new LLMService();
+ 
