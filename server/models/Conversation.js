@@ -20,9 +20,12 @@ const messageSchema = new mongoose.Schema({
   }],
   clinicalTrials: [{
     title: String,
+    briefTitle: String,
     status: String,
+    phase: String,
     eligibility: String,
-    location: String,
+    location: String,           // Keep for backward compatibility
+    locations: [String],        // ← ADD THIS (array of locations)
     contact: String,
     nctId: String,
     url: String
@@ -32,6 +35,7 @@ const messageSchema = new mongoose.Schema({
     totalRetrieved: Number,
     processingTimeMs: Number
   },
+  suggestedQuestions: [String],
   timestamp: { type: Date, default: Date.now }
 });
 

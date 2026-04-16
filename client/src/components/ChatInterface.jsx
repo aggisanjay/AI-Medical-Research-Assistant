@@ -45,11 +45,11 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
 
     const userContent = payload.isStructured
       ? [
-          payload.patientName && `Patient: ${payload.patientName}`,
-          payload.disease && `Disease: ${payload.disease}`,
-          payload.query && `Query: ${payload.query}`,
-          payload.location && `Location: ${payload.location}`
-        ].filter(Boolean).join(' | ')
+        payload.patientName && `Patient: ${payload.patientName}`,
+        payload.disease && `Disease: ${payload.disease}`,
+        payload.query && `Query: ${payload.query}`,
+        payload.location && `Location: ${payload.location}`
+      ].filter(Boolean).join(' | ')
       : payload.message;
 
     // Optimistically add user message
@@ -74,6 +74,7 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
         const assistantMsg = {
           role: 'assistant',
           content: result.data.response,
+          suggestedQuestions: result.data.suggestedQuestions,
           publications: result.data.publications,
           clinicalTrials: result.data.clinicalTrials,
           metadata: result.data.metadata
@@ -133,7 +134,7 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
   return (
     <div className="main-content">
       {/* Header */}
-      <motion.div 
+      <motion.div
         className="chat-header"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -167,7 +168,7 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
       <div className="messages-container">
         <AnimatePresence>
           {messages.length === 0 && !isLoading ? (
-            <motion.div 
+            <motion.div
               className="welcome-screen"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -178,7 +179,7 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 4, repeat: Infinity }}
                 >
-                   <Brain size={64} color="var(--accent-primary)" />
+                  <Brain size={64} color="var(--accent-primary)" />
                 </motion.div>
               </div>
               <h2>Welcome to Curalink</h2>
@@ -187,32 +188,32 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
                 clinical trials, and get structured, source-backed answers from the latest research.
               </p>
               <div className="quick-actions">
-                <motion.div 
-                  className="quick-action" 
+                <motion.div
+                  className="quick-action"
                   onClick={() => handleQuickAction('Latest treatment for lung cancer')}
                   whileHover={{ y: -4 }}
                 >
                   <div className="quick-action-icon"><Activity size={20} /></div>
                   <div className="quick-action-text">Latest treatment for lung cancer</div>
                 </motion.div>
-                <motion.div 
-                  className="quick-action" 
+                <motion.div
+                  className="quick-action"
                   onClick={() => handleQuickAction('Clinical trials for diabetes')}
                   whileHover={{ y: -4 }}
                 >
                   <div className="quick-action-icon"><Stethoscope size={20} /></div>
                   <div className="quick-action-text">Clinical trials for diabetes</div>
                 </motion.div>
-                <motion.div 
-                  className="quick-action" 
+                <motion.div
+                  className="quick-action"
                   onClick={() => handleQuickAction('Top researchers in Alzheimer\'s disease')}
                   whileHover={{ y: -4 }}
                 >
                   <div className="quick-action-icon"><Sparkles size={20} /></div>
                   <div className="quick-action-text">Top researchers in Alzheimer's disease</div>
                 </motion.div>
-                <motion.div 
-                  className="quick-action" 
+                <motion.div
+                  className="quick-action"
                   onClick={() => handleQuickAction('Recent studies on heart disease')}
                   whileHover={{ y: -4 }}
                 >
@@ -224,10 +225,15 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
           ) : (
             <>
               {messages.map((msg, i) => (
-                <MessageBubble key={i} message={msg} />
+                <MessageBubble 
+                  key={i} 
+                  message={msg} 
+                  isLatest={i === messages.length - 1}
+                  onQuickAction={handleQuickAction}
+                />
               ))}
               {isLoading && (
-                <motion.div 
+                <motion.div
                   className="loading-indicator"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}

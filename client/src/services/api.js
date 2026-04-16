@@ -21,6 +21,11 @@ const api = {
   async newConversation() {
     const response = await axios.post(`${API_BASE}/chat/conversation/new`);
     return response.data;
+  },
+
+  async deleteConversation(conversationId) {
+    const response = await axios.delete(`${API_BASE}/chat/conversation/${conversationId}`);
+    return response.data;
   }
 };
 

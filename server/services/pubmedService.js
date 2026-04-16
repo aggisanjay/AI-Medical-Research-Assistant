@@ -161,10 +161,11 @@ class PubmedService {
         source: 'PubMed',
         url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
         pmid: String(pmid),
-        journal,
-        citationCount: 0,
+        journal: journal || 'PubMed Journal',
+        citationCount: 1,       // Give PubMed a base citation score (not 0)
         concepts: [],
-        relevanceScore: 0
+        relevanceScore: 0.5,    // Give PubMed a base relevance score
+        openAccess: false
       };
     } catch (error) {
       return null;

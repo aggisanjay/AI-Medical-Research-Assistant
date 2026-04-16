@@ -14,4 +14,7 @@ router.get('/conversations', chatController.listConversations);
 // Create new conversation
 router.post('/conversation/new', chatController.newConversation);
 
+// Delete conversation
+router.delete('/conversation/:conversationId', chatController.deleteConversation);
+
 module.exports = router;

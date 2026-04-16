@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, MessageSquare, History, Activity, Sparkles } from 'lucide-react';
+import { PlusCircle, MessageSquare, History, Activity, Sparkles, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 
@@ -36,6 +36,23 @@ function Sidebar({ activeConversation, onNewChat, onSelectConversation, refreshT
     return date.toLocaleDateString();
   };
 
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+      try {
+        const result = await api.deleteConversation(id);
+        if (result.success) {
+          if (activeConversation === id) {
+            onNewChat();
+          }
+          loadConversations();
+        }
+      } catch (err) {
+        console.error('Failed to delete conversation:', err);
+      }
+    }
+  };
+
   return (
     <div className="sidebar">
       <div className="sidebar-header">
@@ -45,8 +62,8 @@ function Sidebar({ activeConversation, onNewChat, onSelectConversation, refreshT
           </div>
           <h1>Curalink</h1>
         </div>
-        <motion.button 
-          className="new-chat-btn" 
+        <motion.button
+          className="new-chat-btn"
           onClick={onNewChat}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -55,13 +72,13 @@ function Sidebar({ activeConversation, onNewChat, onSelectConversation, refreshT
           New Research Chat
         </motion.button>
       </div>
-      
+
       <div className="sidebar-conversations">
         <div className="sidebar-label">
-           <History size={12} style={{ marginRight: '6px' }} />
-           Recent Research
+          <History size={12} style={{ marginRight: '6px' }} />
+          Recent Research
         </div>
-        
+
         <AnimatePresence>
           {conversations.map((conv, index) => (
             <motion.div
@@ -72,13 +89,22 @@ function Sidebar({ activeConversation, onNewChat, onSelectConversation, refreshT
               className={`conv-item ${activeConversation === conv.conversationId ? 'active' : ''}`}
               onClick={() => onSelectConversation(conv.conversationId)}
             >
-              <div className="conv-item-title">
-                {conv.disease || conv.lastMessage || 'New Conversation'}
+              <div className="conv-item-content">
+                <div className="conv-item-title">
+                  {conv.disease || conv.lastMessage || 'New Conversation'}
+                </div>
+                <div className="conv-item-meta">
+                  <MessageSquare size={10} />
+                  {conv.messageCount} messages · {formatTime(conv.updatedAt)}
+                </div>
               </div>
-              <div className="conv-item-meta">
-                <MessageSquare size={10} />
-                {conv.messageCount} messages · {formatTime(conv.updatedAt)}
-              </div>
+              <button 
+                className="delete-conv-btn" 
+                onClick={(e) => handleDelete(e, conv.conversationId)}
+                title="Delete Chat"
+              >
+                <Trash2 size={14} />
+              </button>
             </motion.div>
           ))}
         </AnimatePresence>

@@ -1,45 +1,104 @@
-import React from 'react';
-import { ExternalLink, Calendar, Users, Star, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Users, Calendar, Star, ExternalLink, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
 
-function PublicationCard({ publication }) {
+function PublicationCard({ publication, index }) {
+  const [expanded, setExpanded] = useState(false);
   const { title, abstract, authors, year, source, url, totalScore } = publication;
+
+  const authorStr = authors?.length > 0
+    ? authors.slice(0, 4).join(', ') + (authors.length > 4 ? ' et al.' : '')
+    : 'Authors not listed';
+
+  const cleanAbstract = abstract
+    ? abstract.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
+    : 'Abstract not available';
+
+  const shortAbstract = cleanAbstract.substring(0, 200);
+  const hasMore = cleanAbstract.length > 200;
 
   return (
     <motion.div 
       className="pub-card"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -4, borderColor: 'var(--accent-primary)' }}
     >
-      <div className="pub-card-title">
-        <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-          {title} <ExternalLink size={14} style={{ display: 'inline', marginLeft: '4px' }} />
-        </a>
-      </div>
-      {abstract && (
-        <div className="pub-card-abstract">
-          {abstract}
-        </div>
-      )}
-      <div className="pub-card-meta">
+      {/* Header: Index + Source Badge */}
+      <div className="pub-card-header">
+        <span className="pub-card-index">#{index}</span>
         <span className={`source-badge ${source?.toLowerCase()}`}>
           {source}
         </span>
-        {year && (
-          <span className="metadata-chip">
-            <Calendar size={12} /> {year}
-          </span>
+      </div>
+
+      {/* REQUIRED: Title */}
+      <h4 className="pub-card-title">
+        <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {title} <ExternalLink size={14} />
+        </a>
+      </h4>
+
+      {/* REQUIRED: Abstract / Summary */}
+      <div className="pub-card-abstract-section">
+        <span className="pub-field-label">
+          <BookOpen size={11} style={{ display: 'inline', marginRight: '4px' }} /> Abstract / Summary:
+        </span>
+        <p className="pub-card-abstract">
+          {expanded ? cleanAbstract : shortAbstract}
+          {hasMore && !expanded && '...'}
+        </p>
+        {hasMore && (
+          <button
+            className="read-more-btn"
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? (
+              <>Show Less <ChevronUp size={12} style={{ display: 'inline' }} /></>
+            ) : (
+              <>Read More <ChevronDown size={12} style={{ display: 'inline' }} /></>
+            )}
+          </button>
         )}
-        {authors && authors.length > 0 && (
-          <span className="metadata-chip">
-            <Users size={12} /> {authors[0]}{authors.length > 1 ? ' et al.' : ''}
+      </div>
+
+      {/* REQUIRED: Authors, Year, Source, URL */}
+      <div className="pub-details-grid">
+        <div className="pub-detail-row">
+          <span className="pub-field-label">
+            <Users size={11} style={{ display: 'inline', marginRight: '4px' }} /> Authors:
           </span>
-        )}
+          <span className="pub-field-value">{authorStr}</span>
+        </div>
+        <div className="pub-detail-row">
+          <span className="pub-field-label">
+            <Calendar size={11} style={{ display: 'inline', marginRight: '4px' }} /> Year:
+          </span>
+          <span className="pub-field-value">{year || 'Not available'}</span>
+        </div>
+        <div className="pub-detail-row">
+          <span className="pub-field-label">
+            <Star size={11} style={{ display: 'inline', marginRight: '4px' }} /> Source:
+          </span>
+          <span className="pub-field-value">{source}</span>
+        </div>
+        <div className="pub-detail-row">
+          <span className="pub-field-label">
+            <ExternalLink size={11} style={{ display: 'inline', marginRight: '4px' }} /> URL:
+          </span>
+          <span className="pub-field-value">
+            <a href={url} target="_blank" rel="noopener noreferrer">
+              View Full Publication ↗
+            </a>
+          </span>
+        </div>
         {totalScore && (
-          <span className="metadata-chip" style={{ color: 'var(--accent-primary)' }}>
-            <Star size={12} fill="currentColor" /> {Math.round(totalScore)}
-          </span>
+          <div className="pub-detail-row">
+            <span className="pub-field-label">
+              <Star size={11} style={{ display: 'inline', marginRight: '4px' }} /> Relevance:
+            </span>
+            <span className="pub-field-value">Score: {Math.round(totalScore)}/100</span>
+          </div>
         )}
       </div>
     </motion.div>

@@ -61,13 +61,17 @@ class Orchestrator {
       console.log('🔄 Step 4: Ranking and filtering...');
       const rankedPublications = rankingService.rankPublications(allPublications, expandedQuery, 8);
       const rankedTrials = rankingService.rankTrials(trials, expandedQuery, 6);
-      console.log(`   After ranking: ${rankedPublications.length} publications + ${rankedTrials.length} trials`);
+
+      // Log source distribution
+      const pubmedCount = rankedPublications.filter(p => p.source === 'PubMed').length;
+      const openAlexCount = rankedPublications.filter(p => p.source === 'OpenAlex').length;
+      console.log(`   After ranking: ${rankedPublications.length} publications (${pubmedCount} PubMed + ${openAlexCount} OpenAlex) + ${rankedTrials.length} trials`);
 
       // Step 5: LLM Reasoning
       console.log('🔄 Step 5: Generating LLM response...');
       const conversationHistory = await contextService.getHistoryForLLM(conversationId);
 
-      const llmResponse = await llmService.generateResponse({
+      const rawPromptResponse = await llmService.generateResponse({
         userQuery: resolvedInput.enrichedQuery || resolvedInput.query || resolvedInput.naturalQuery,
         disease: resolvedInput.disease,
         publications: rankedPublications,
@@ -76,17 +80,39 @@ class Orchestrator {
         patientName: resolvedInput.patientName
       });
 
-      const processingTime = Date.now() - startTime;
-      console.log(`✅ Pipeline complete in ${processingTime}ms`);
+      // Parse out suggested follow up questions
+      let llmResponse = rawPromptResponse;
+      let suggestedQuestions = [];
+      const suggestionDelimiter = '### ✨ Suggested Follow-Up Questions';
+      
+      if (llmResponse.includes(suggestionDelimiter)) {
+        const parts = llmResponse.split(suggestionDelimiter);
+        llmResponse = parts[0].trim();
+        const suggestionsText = parts[1];
+        
+        // Extract lines starting with a number or bullet
+        const lines = suggestionsText.split('\n');
+        for (const line of lines) {
+          const match = line.match(/^\d+\.\s+(.+)$/);
+          if (match && match[1]) {
+            // Remove markdown bolder/italic just in case
+            suggestedQuestions.push(match[1].replace(/[*_~`]/g, '').trim());
+          }
+        }
+      }
 
-      // Save assistant response
+      const processingTime = Date.now() - startTime;
+      console.log(`✅ Pipeline complete in ${processingTime}ms. Parsed ${suggestedQuestions.length} followup questions.`);
+
+      // Save assistant response — include ALL required fields
       await contextService.addMessage(conversationId, {
         role: 'assistant',
         content: llmResponse,
+        suggestedQuestions: suggestedQuestions,
         publications: rankedPublications.map(p => ({
           title: p.title,
-          abstract: (p.abstract || '').substring(0, 300),
-          authors: p.authors,
+          abstract: (p.abstract || '').substring(0, 500),  // Include more abstract
+          authors: p.authors || [],
           year: p.year,
           source: p.source,
           url: p.url,
@@ -94,10 +120,13 @@ class Orchestrator {
         })),
         clinicalTrials: rankedTrials.map(t => ({
           title: t.briefTitle || t.title,
+          briefTitle: t.briefTitle || t.title,
           status: t.status,
-          eligibility: (t.eligibility || '').substring(0, 200),
+          phase: t.phase || 'N/A',
+          eligibility: (t.eligibility || '').substring(0, 500),
           location: (t.locations || []).join('; '),
-          contact: t.contact,
+          locations: t.locations || ['Not specified'],
+          contact: t.contact || 'Not available',
           nctId: t.nctId,
           url: t.url
         })),
@@ -110,8 +139,28 @@ class Orchestrator {
 
       return {
         response: llmResponse,
-        publications: rankedPublications,
-        clinicalTrials: rankedTrials,
+        suggestedQuestions: suggestedQuestions,
+        publications: rankedPublications.map(p => ({
+          title: p.title,
+          abstract: (p.abstract || '').substring(0, 500),
+          authors: p.authors || [],
+          year: p.year,
+          source: p.source,
+          url: p.url,
+          totalScore: p.totalScore
+        })),
+        clinicalTrials: rankedTrials.map(t => ({
+          title: t.title,
+          briefTitle: t.briefTitle || t.title,
+          status: t.status,
+          phase: t.phase || 'N/A',
+          eligibility: (t.eligibility || '').substring(0, 500),
+          location: (t.locations || []).join('; '),
+          locations: t.locations || ['Not specified'],
+          contact: t.contact || 'Not available',
+          nctId: t.nctId,
+          url: t.url
+        })),
         metadata: {
           queryExpansion: expandedQuery.expandedQueries.slice(0, 5),
           totalRetrieved,

@@ -114,6 +114,24 @@ const chatController = {
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
+  },
+
+  /**
+   * Delete conversation
+   */
+  async deleteConversation(req, res) {
+    try {
+      const { conversationId } = req.params;
+      const result = await Conversation.deleteOne({ conversationId });
+      
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ success: false, error: 'Conversation not found' });
+      }
+
+      res.json({ success: true, message: 'Conversation deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
   }
 };
 
