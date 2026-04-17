@@ -1,13 +1,60 @@
 const axios = require('axios');
 
+// ─── Smart Truncation Helper ─────────────────────────────
+/**
+ * Truncates text at a clean sentence boundary.
+ * Never cuts mid-sentence or mid-word.
+ */
+function smartTruncate(text, maxLength) {
+  if (!text || text.length <= maxLength) return text || '';
+
+  const cleaned = text
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (cleaned.length <= maxLength) return cleaned;
+
+  const chunk = cleaned.substring(0, maxLength);
+
+  // Strategy 1: Cut at last sentence boundary
+  const lastSentenceEnd = Math.max(
+    chunk.lastIndexOf('. '),
+    chunk.lastIndexOf('.\n'),
+    chunk.lastIndexOf('? '),
+    chunk.lastIndexOf('! ')
+  );
+
+  if (lastSentenceEnd > maxLength * 0.4) {
+    return chunk.substring(0, lastSentenceEnd + 1).trim();
+  }
+
+  // Strategy 2: Cut at last bullet/line break
+  const lastBullet = Math.max(
+    chunk.lastIndexOf('\n•'),
+    chunk.lastIndexOf('\n-'),
+    chunk.lastIndexOf('\n*')
+  );
+
+  if (lastBullet > maxLength * 0.4) {
+    return chunk.substring(0, lastBullet).trim();
+  }
+
+  // Strategy 3: Cut at last word boundary
+  const lastSpace = chunk.lastIndexOf(' ');
+  if (lastSpace > maxLength * 0.5) {
+    return chunk.substring(0, lastSpace).trim() + '...';
+  }
+
+  // Strategy 4: Hard cut (last resort)
+  return chunk.trim() + '...';
+}
+
 class ClinicalTrialsService {
   constructor() {
     this.baseUrl = 'https://clinicaltrials.gov/api/v2/studies';
   }
 
-  /**
-   * Fetch clinical trials from ClinicalTrials.gov API v2
-   */
   async fetchTrials(expandedQuery, options = {}) {
     const { maxResults = 50 } = options;
     const allTrials = [];
@@ -15,7 +62,6 @@ class ClinicalTrialsService {
     try {
       const { condition, intervention, location } = expandedQuery.clinicalTrialsQuery;
 
-      // Strategy 1: Search by condition + intervention
       if (condition) {
         const trials = await this._fetch({
           'query.cond': condition,
@@ -26,7 +72,6 @@ class ClinicalTrialsService {
         allTrials.push(...trials);
       }
 
-      // Strategy 2: Broader search with primary query
       if (allTrials.length < 10) {
         const trials = await this._fetch({
           'query.cond': expandedQuery.disease || expandedQuery.primaryQuery,
@@ -36,7 +81,6 @@ class ClinicalTrialsService {
         allTrials.push(...trials);
       }
 
-      // Deduplicate by NCT ID
       const seen = new Set();
       const deduplicated = allTrials.filter(trial => {
         if (seen.has(trial.nctId)) return false;
@@ -90,16 +134,15 @@ class ClinicalTrialsService {
           const parts = [loc.facility, loc.city, loc.state, loc.country].filter(Boolean);
           const cleanParts = [];
           parts.forEach(part => {
-             // Only add a geographic part if the facility string or a previous part doesn't already contain it exactly to avoid "Beijing, Beijing"
-             const isDuplicate = cleanParts.some(cp => cp.toLowerCase().includes(part.toLowerCase()));
-             if (!isDuplicate) {
-                 cleanParts.push(part);
-             }
+            const isDuplicate = cleanParts.some(cp => cp.toLowerCase().includes(part.toLowerCase()));
+            if (!isDuplicate) {
+              cleanParts.push(part);
+            }
           });
           return cleanParts.join(', ');
         })
-        .filter(Boolean); // Ensure no empty strings in the final list
-        
+        .filter(Boolean);
+
       const locations = [...new Set(locationsRaw)];
 
       // Extract contact info
@@ -108,7 +151,6 @@ class ClinicalTrialsService {
       });
       let centralContacts = [...new Set(centralContactsRaw)];
 
-      // Fallback to overall officials if no central contacts
       if (centralContacts.length === 0) {
         const officialsRaw = (contacts.overallOfficials || []).slice(0, 2).map(o => {
           return [o.name, o.affiliation].filter(Boolean).join(' | ');
@@ -116,7 +158,6 @@ class ClinicalTrialsService {
         centralContacts = [...new Set(officialsRaw)];
       }
 
-      // Fallback to location contacts
       if (centralContacts.length === 0) {
         const locContactsRaw = (contacts.locations || [])
           .filter(loc => loc.contacts && loc.contacts.length > 0)
@@ -128,19 +169,20 @@ class ClinicalTrialsService {
         centralContacts = [...new Set(locContactsRaw)];
       }
 
-      // Eligibility text
-      const eligibilityText = [
+      // ✅ FIX 1: Eligibility text — smart truncation
+      const rawEligibility = [
         eligibility.eligibilityCriteria,
         eligibility.minimumAge ? `Min Age: ${eligibility.minimumAge}` : '',
         eligibility.maximumAge ? `Max Age: ${eligibility.maximumAge}` : '',
         eligibility.sex ? `Sex: ${eligibility.sex}` : ''
-      ].filter(Boolean).join('\n').substring(0, 500);
+      ].filter(Boolean).join('\n');
+
+      const eligibilityText = smartTruncate(rawEligibility, 500);
 
       const nctId = identification.nctId || '';
 
-      // Fallback location to organization if no specific sites
-      const finalLocations = locations.length > 0 
-        ? locations 
+      const finalLocations = locations.length > 0
+        ? locations
         : (identification.organization?.fullName ? [identification.organization.fullName] : ['Not specified']);
 
       return {
@@ -153,7 +195,10 @@ class ClinicalTrialsService {
         contact: centralContacts.length > 0 ? centralContacts.join('; ') : 'Not available',
         nctId,
         url: `https://clinicaltrials.gov/study/${nctId}`,
-        briefSummary: (description.briefSummary || '').substring(0, 500),
+
+        // ✅ FIX 2: Brief summary — smart truncation
+        briefSummary: smartTruncate(description.briefSummary || '', 500),
+
         startDate: status.startDateStruct?.date || '',
         completionDate: status.completionDateStruct?.date || '',
         enrollmentCount: design.enrollmentInfo?.count || null,
