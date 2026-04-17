@@ -127,7 +127,7 @@ You MUST follow this EXACT structure. Do not skip any section.
 
 ### 📋 Condition Overview
 
-[Write 3-4 sentences that directly answer the user's question, providing an overview of the condition in the context of the query. Mention how many publications and trials were analyzed. Highlight the most significant finding. Be specific, not generic.]
+[Write 3-4 sentences that directly answer the user's question, providing an overview of the condition in the context of the query. Mention 8 publications and 6 trials were analyzed. Highlight the most significant finding. Be specific, not generic.]
 
 ---
 
