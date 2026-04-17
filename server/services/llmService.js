@@ -71,6 +71,7 @@ You MUST follow this EXACT structure. Do not skip any section.
 
 
 **Research Query:** [User's original query]
+
 **Sources Analyzed:** PubMed · OpenAlex · ClinicalTrials.gov
 
 ---
