@@ -21,9 +21,9 @@ const CONFIG = {
  * Format: "model-id:provider-or-policy"
  */
 const HF_MODEL_ROSTER = [
+  'Qwen/Qwen2.5-7B-Instruct:fastest',
   'mistralai/Mistral-7B-Instruct-v0.3:featherless-ai',
   'meta-llama/Llama-3.2-3B-Instruct:fastest',
-  'Qwen/Qwen2.5-7B-Instruct:fastest',
   'meta-llama/Llama-3.2-1B-Instruct:fastest',
   'Qwen/Qwen2.5-3B-Instruct:fastest',
   'microsoft/Phi-3-mini-4k-instruct:fastest',
