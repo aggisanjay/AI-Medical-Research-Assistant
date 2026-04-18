@@ -17,6 +17,24 @@ function ClinicalTrialCard({ trial, index }) {
     return 'other';
   };
 
+  const parseEligibility = (text) => {
+    if (!text) return null;
+    const sections = text.split(/(?=Inclusion Criteria:|Exclusion Criteria:)/i);
+    return sections.map((section, i) => {
+      const lines = section.split('\n').filter(l => l.trim());
+      const header = lines[0];
+      const items = lines.slice(1).map(item => item.replace(/^[-•*]\s*/, '').trim());
+      return (
+        <div key={i} className="eligibility-section-block">
+          <h5 className="eligibility-header">{header}</h5>
+          <ul className="eligibility-list">
+            {items.map((item, j) => <li key={j}>{item}</li>)}
+          </ul>
+        </div>
+      );
+    });
+  };
+
   const cleanText = (text) => {
     if (!text) return 'Not specified';
     return text
@@ -33,7 +51,6 @@ function ClinicalTrialCard({ trial, index }) {
   const displayTitle = briefTitle || title;
   const filteredLocs = locations?.filter(l => l && l !== 'Not specified') || [];
   
-  // Robust location string: Use locations if available, fallback to organization, then default text
   let locationStr = 'Location not specified';
   if (filteredLocs.length > 0) {
     locationStr = filteredLocs.slice(0, 5).join('; ');
@@ -51,7 +68,6 @@ function ClinicalTrialCard({ trial, index }) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4, borderColor: 'var(--success)' }}
     >
-      {/* Header: Index + Status Badge */}
       <div className="trial-card-header">
         <span className="trial-card-index">#{index}</span>
         <span className={`trial-status ${getStatusClass(status)}`}>
@@ -59,17 +75,13 @@ function ClinicalTrialCard({ trial, index }) {
         </span>
       </div>
 
-      {/* REQUIRED: Title */}
       <h4 className="trial-card-title">
         <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {displayTitle} <ExternalLink size={14} />
         </a>
       </h4>
 
-      {/* ALL REQUIRED FIELDS */}
       <div className="trial-details-grid">
-
-        {/* REQUIRED: Recruiting Status */}
         <div className="trial-detail-row">
           <span className="trial-detail-label">
             <Info size={11} style={{ display: 'inline', marginRight: '4px' }} /> Recruiting Status:
@@ -81,7 +93,6 @@ function ClinicalTrialCard({ trial, index }) {
           </span>
         </div>
 
-        {/* REQUIRED: Location */}
         <div className="trial-detail-row">
           <span className="trial-detail-label">
             <MapPin size={11} style={{ display: 'inline', marginRight: '4px' }} /> Location:
@@ -89,7 +100,6 @@ function ClinicalTrialCard({ trial, index }) {
           <span className="trial-detail-value">{locationStr}</span>
         </div>
 
-        {/* REQUIRED: Contact Information */}
         <div className="trial-detail-row">
           <span className="trial-detail-label">
             <Phone size={11} style={{ display: 'inline', marginRight: '4px' }} /> Contact:
@@ -97,7 +107,6 @@ function ClinicalTrialCard({ trial, index }) {
           <span className="trial-detail-value">{contactStr}</span>
         </div>
 
-        {/* Extra: Phase */}
         {phase && phase !== 'N/A' && (
           <div className="trial-detail-row">
             <span className="trial-detail-label">
@@ -107,7 +116,6 @@ function ClinicalTrialCard({ trial, index }) {
           </div>
         )}
 
-        {/* Extra: NCT ID */}
         {nctId && (
           <div className="trial-detail-row">
             <span className="trial-detail-label">
@@ -117,7 +125,6 @@ function ClinicalTrialCard({ trial, index }) {
           </div>
         )}
 
-        {/* Extra: URL */}
         <div className="trial-detail-row">
           <span className="trial-detail-label">
             <ExternalLink size={11} style={{ display: 'inline', marginRight: '4px' }} /> URL:
@@ -130,7 +137,6 @@ function ClinicalTrialCard({ trial, index }) {
         </div>
       </div>
 
-      {/* REQUIRED: Eligibility Criteria — Always Visible, Expandable */}
       <div className="trial-eligibility-section">
         <button
           className="eligibility-toggle"
@@ -148,14 +154,13 @@ function ClinicalTrialCard({ trial, index }) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
           >
-            {cleanText(eligibility)}
+            {parseEligibility(cleanText(eligibility))}
           </motion.div>
         )}
 
-        {/* Always show a preview */}
         {!showEligibility && eligibility && (
           <p className="eligibility-preview">
-            {cleanText(eligibility).substring(0, 150)}...
+            {cleanText(eligibility).substring(0, 300)}...
           </p>
         )}
 

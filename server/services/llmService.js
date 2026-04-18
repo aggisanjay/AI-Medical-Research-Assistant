@@ -1,17 +1,72 @@
 
+
 const axios = require('axios');
 
-// ─── Configuration Constants ─────────────────────────────────
+// ─── Smart Truncation Helper ─────────────────────────────
+/**
+ * Truncates text at a clean sentence boundary.
+ * Never cuts mid-sentence or mid-word.
+ *
+ * @param {string} text - The text to truncate
+ * @param {number} maxLength - Maximum character length
+ * @returns {string} Cleanly truncated text
+ */
+function smartTruncate(text, maxLength) {
+  if (!text || text.length <= maxLength) return text || '';
+
+  const cleaned = text
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (cleaned.length <= maxLength) return cleaned;
+
+  const chunk = cleaned.substring(0, maxLength);
+
+  // Strategy 1: Cut at last sentence boundary (. ! ?)
+  const lastSentenceEnd = Math.max(
+    chunk.lastIndexOf('. '),
+    chunk.lastIndexOf('.\n'),
+    chunk.lastIndexOf('? '),
+    chunk.lastIndexOf('! ')
+  );
+
+  if (lastSentenceEnd > maxLength * 0.4) {
+    return chunk.substring(0, lastSentenceEnd + 1).trim();
+  }
+
+  // Strategy 2: Cut at last bullet point / line break
+  const lastBullet = Math.max(
+    chunk.lastIndexOf('\n•'),
+    chunk.lastIndexOf('\n-'),
+    chunk.lastIndexOf('\n*')
+  );
+
+  if (lastBullet > maxLength * 0.4) {
+    return chunk.substring(0, lastBullet).trim();
+  }
+
+  // Strategy 3: Cut at last word boundary
+  const lastSpace = chunk.lastIndexOf(' ');
+  if (lastSpace > maxLength * 0.5) {
+    return chunk.substring(0, lastSpace).trim() + '...';
+  }
+
+  // Strategy 4: Hard cut (last resort)
+  return chunk.trim() + '...';
+}
+
+// ─── Configuration Constants ─────────────────────────────
 
 const CONFIG = {
-  MAX_RESPONSE_TOKENS: 4500,      // More tokens for complete report
-  TEMPERATURE: 0.2,               // Lower = more focused, less random
-  MAX_PUBS_FOR_LLM: 6,           // Send 6 publications
-  MAX_TRIALS_FOR_LLM: 4,         // Send 4 trials
-  MAX_ABSTRACT_LENGTH: 350,       // More abstract for better synthesis
+  MAX_RESPONSE_TOKENS: 8500,
+  TEMPERATURE: 0.2,
+  MAX_PUBS_FOR_LLM: 6,
+  MAX_TRIALS_FOR_LLM: 4,
+  MAX_ABSTRACT_LENGTH: 350,
   MAX_HISTORY_MESSAGES: 4,
   MAX_HISTORY_CHARS: 200,
-  HF_TIMEOUT: 180000,            // 3 minutes
+  HF_TIMEOUT: 180000,
   OLLAMA_TIMEOUT: 300000,
   HF_LOADING_WAIT: 20000,
 };
@@ -22,9 +77,9 @@ const CONFIG = {
  * Format: "model-id:provider-or-policy"
  */
 const HF_MODEL_ROSTER = [
+  'Qwen/Qwen2.5-7B-Instruct:fastest',
   'mistralai/Mistral-7B-Instruct-v0.3:featherless-ai',
   'meta-llama/Llama-3.2-3B-Instruct:fastest',
-  'Qwen/Qwen2.5-7B-Instruct:fastest',
   'meta-llama/Llama-3.2-1B-Instruct:fastest',
   'Qwen/Qwen2.5-3B-Instruct:fastest',
   'microsoft/Phi-3-mini-4k-instruct:fastest',
@@ -38,13 +93,6 @@ const HF_ROUTER_URL = 'https://router.huggingface.co/v1/chat/completions';
 
 // ─── System Prompt ───────────────────────────────────────────
 
-/**
- * Carefully crafted system prompt that:
- * 1. Defines Curalink's persona and behavior
- * 2. Enforces structured output format
- * 3. Prevents hallucination with strict grounding rules
- * 4. Ensures source attribution in every response
- */
 const SYSTEM_PROMPT = `You are **Curalink**, a premium AI Medical Research Assistant developed to deliver structured, evidence-based research reports.
 
 You are NOT a chatbot. You are a **Research + Reasoning Engine**.
@@ -72,13 +120,14 @@ You MUST follow this EXACT structure. Do not skip any section.
 
 
 **Research Query:** [User's original query]
+
 **Sources Analyzed:** PubMed · OpenAlex · ClinicalTrials.gov
 
 ---
 
 ### 📋 Condition Overview
 
-[Write 3-4 sentences that directly answer the user's question, providing an overview of the condition in the context of the query. Mention how many publications and trials were analyzed. Highlight the most significant finding. Be specific, not generic.]
+[Write 3-4 sentences that directly answer the user's question, providing an overview of the condition in the context of the query. Mention 8 publications and 6 trials were analyzed. Highlight the most significant finding. Be specific, not generic.]
 
 ---
 
@@ -127,7 +176,7 @@ The following clinical trials are relevant to this research area:
 | **Phase** | [Phase] |
 | **Location** | 📍 [Location details] |
 | **Contact** | 📞 [Contact name, phone, email] |
-| **Eligibility** | [Brief eligibility summary — age, sex, key criteria] |
+| **Eligibility** | • Point 1: Age/sex requirement • Point 2: Key inclusion criterion • Point 3: Key exclusion criterion • Point 4: Disease stage or prior treatment condition |
 | **Registry** | [View on ClinicalTrials.gov →](URL) |
 
 [Continue for Trial 2, 3 — cover ALL provided trials]
@@ -181,7 +230,7 @@ This report was generated through Curalink's automated pipeline:
 • For clinical trials, always show: Status, Location, Contact, Eligibility
 • End with the methodology section, disclaimer, and exactly 4 Suggested Follow-Up Questions — ALWAYS`;
 
-// ─── Main Service Class ──────────────────────────────────────
+// ─── Main Service Class ──────────────────────────────────
 
 class LLMService {
   constructor() {
@@ -198,20 +247,6 @@ class LLMService {
 
   /**
    * Main entry point — processes research data through the LLM pipeline.
-   *
-   * Flow:
-   *   1. Build structured messages (system + history + user prompt)
-   *   2. Route to configured provider (HuggingFace / Ollama)
-   *   3. On failure, cascade to fallback template engine
-   *
-   * @param {Object} params
-   * @param {string} params.userQuery - The user's question
-   * @param {string} params.disease - Disease context
-   * @param {Array}  params.publications - Ranked publications
-   * @param {Array}  params.clinicalTrials - Ranked clinical trials
-   * @param {Array}  params.conversationHistory - Previous messages
-   * @param {string} params.patientName - Optional patient name
-   * @returns {string} Structured markdown response
    */
   async generateResponse(params) {
     const messages = this._buildMessages(params);
@@ -239,19 +274,6 @@ class LLMService {
 
   // ─── Provider: HuggingFace Router API ────────────────────
 
-  /**
-   * Calls HuggingFace's Router API with automatic model rotation.
-   *
-   * Strategy:
-   *   1. Start with preferred model from .env
-   *   2. On failure, iterate through model roster
-   *   3. Handle 503 (model loading) with wait + retry
-   *   4. Handle 400/404 by skipping to next model
-   *
-   * @param {Array} messages - Chat messages array
-   * @returns {string} LLM-generated text
-   * @throws {Error} If all models fail
-   */
   async _callHuggingFace(messages) {
     if (!this.hfToken) {
       throw new Error('HF_API_TOKEN environment variable is not set');
@@ -267,22 +289,10 @@ class LLMService {
     throw new Error(`All ${modelsToTry.length} HuggingFace models exhausted`);
   }
 
-  /**
-<<<<<<< HEAD
-   * Attempts a single HuggingFace model call with retry logic.
-   *
-   * @param {string} model - Model ID with optional provider suffix
-   * @param {Array} messages - Chat messages
-   * @returns {string|null} Response text or null if failed
-=======
-   * Main method — generates response using configured LLM provider
->>>>>>> f98f46ce3af57cabbef053c67ce455d3a2522d2c
-   */
   async _tryHuggingFaceModel(model, messages) {
     try {
       console.log(`  🤗 Trying: ${model}`);
 
-<<<<<<< HEAD
       const response = await this._makeHuggingFaceRequest(model, messages);
       const content = response.data?.choices?.[0]?.message?.content;
 
@@ -298,9 +308,6 @@ class LLMService {
     }
   }
 
-  /**
-   * Makes the actual HTTP request to HuggingFace Router.
-   */
   async _makeHuggingFaceRequest(model, messages) {
     return axios.post(HF_ROUTER_URL, {
       model,
@@ -317,14 +324,6 @@ class LLMService {
     });
   }
 
-  /**
-   * Handles HuggingFace API errors with intelligent retry logic.
-   *
-   * 503 → Model loading: wait estimated_time, then retry once
-   * 400 → Bad request / model not supported: skip to next
-   * 403 → Unauthorized / Pro required: skip to next
-   * 404 → Model not found: skip to next
-   */
   async _handleHuggingFaceError(error, model, messages) {
     const status = error.response?.status;
     const errMsg = error.response?.data?.message
@@ -333,7 +332,6 @@ class LLMService {
 
     console.log(`  ❌ ${model} [${status}]: ${errMsg}`);
 
-    // 503: Model is loading — wait and retry once
     if (status === 503) {
       const waitTime = error.response?.data?.estimated_time || 20;
       console.log(`  ⏳ Model loading — retrying in ${Math.ceil(waitTime)}s...`);
@@ -353,18 +351,13 @@ class LLMService {
       }
     }
 
-    return null; // Signal to try next model
+    return null;
   }
 
-  /**
-   * Builds the ordered queue of models to try.
-   * Preferred model from .env goes first, followed by the roster.
-   */
   _buildModelQueue() {
     const queue = [];
     const seen = new Set();
 
-    // Priority 1: User's preferred model from .env
     if (this.hfModel) {
       const preferred = this.hfModel.includes(':')
         ? this.hfModel
@@ -373,7 +366,6 @@ class LLMService {
       seen.add(preferred);
     }
 
-    // Priority 2: Curated model roster
     for (const model of HF_MODEL_ROSTER) {
       if (!seen.has(model)) {
         queue.push(model);
@@ -386,25 +378,12 @@ class LLMService {
 
   // ─── Provider: Ollama (Local) ────────────────────────────
 
-  /**
-   * Calls Ollama local LLM with endpoint fallback.
-   *
-   * Tries endpoints in order:
-   *   1. /api/chat     (Ollama ≥0.1.29)
-   *   2. /api/generate (Ollama legacy)
-   *
-   * @param {Array} messages - Chat messages
-   * @returns {string} LLM response
-   * @throws {Error} If all endpoints fail
-   */
   async _callOllama(messages) {
     console.log(`  🦙 Model: ${this.ollamaModel}`);
 
-    // Attempt 1: /api/chat (preferred)
     const chatResult = await this._ollamaChat(messages);
     if (chatResult) return chatResult;
 
-    // Attempt 2: /api/generate (legacy)
     const generateResult = await this._ollamaGenerate(messages);
     if (generateResult) return generateResult;
 
@@ -471,34 +450,16 @@ class LLMService {
 
   // ─── Fallback: Template Engine ───────────────────────────
 
-  /**
-   * Generates a structured response WITHOUT any LLM.
-   *
-   * This is the safety net that ensures the app never returns
-   * an empty response. It formats the raw research data into
-   * the same structured markdown format as the LLM would produce.
-   */
   _buildFallbackResponse(params) {
     const { userQuery, disease, publications, clinicalTrials, patientName } = params;
     const lines = [];
     const currentYear = new Date().getFullYear();
     const topic = disease || userQuery;
-    const timestamp = new Date().toLocaleDateString('en-US', { 
-      year: 'numeric', month: 'long', day: 'numeric' 
-=======
-    const systemPrompt = this._buildSystemPrompt();
-    const userPrompt = this._buildUserPrompt({
-      userQuery,
-      disease,
-      publications: (publications || []).slice(0, 4),
-      clinicalTrials: (clinicalTrials || []).slice(0, 3),
-      patientName
->>>>>>> f98f46ce3af57cabbef053c67ce455d3a2522d2c
+    const timestamp = new Date().toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
     });
 
-    // ══════════════════════════════════════
     // ── REPORT HEADER ──
-    // ══════════════════════════════════════
 
     if (patientName) {
       lines.push(`## 🏥 Medical Research Report`);
@@ -511,9 +472,7 @@ class LLMService {
       lines.push(`**Generated:** ${timestamp} · **Sources:** PubMed · OpenAlex · ClinicalTrials.gov\n`);
     }
 
-    // ══════════════════════════════════════
     // ── EXECUTIVE SUMMARY ──
-    // ══════════════════════════════════════
 
     lines.push(`---\n`);
     lines.push(`### 📋 Executive Summary\n`);
@@ -521,8 +480,8 @@ class LLMService {
     const pubCount = publications?.length || 0;
     const trialCount = clinicalTrials?.length || 0;
     const recentPubs = publications?.filter(p => p.year >= currentYear - 1).length || 0;
-    const recruitingTrials = clinicalTrials?.filter(t => 
-      t.status?.toUpperCase().includes('RECRUITING') && 
+    const recruitingTrials = clinicalTrials?.filter(t =>
+      t.status?.toUpperCase().includes('RECRUITING') &&
       !t.status?.toUpperCase().includes('NOT')
     ).length || 0;
 
@@ -535,27 +494,26 @@ class LLMService {
     lines.push(`> • **${recruitingTrials}** trials actively recruiting participants  `);
     lines.push(`> • Results scored on **relevance, recency, and source credibility**\n`);
 
-    // ══════════════════════════════════════
     // ── KEY FINDINGS ──
-    // ══════════════════════════════════════
 
     if (publications?.length > 0) {
       lines.push(`---\n`);
       lines.push(`### 📚 Key Research Findings\n`);
 
-      // Group insights by theme
       const pubmedPubs = publications.filter(p => p.source === 'PubMed');
       const openAlexPubs = publications.filter(p => p.source === 'OpenAlex');
 
       lines.push(`We identified **${publications.length} highly relevant publications** across our databases (${pubmedPubs.length} from PubMed, ${openAlexPubs.length} from OpenAlex). Below are the top-ranked findings:\n`);
 
       publications.slice(0, 6).forEach((pub, i) => {
-        // Clean abstract
+        // ✅ FIX: Smart truncation for abstracts
         const cleanAbstract = pub.abstract
-          ? pub.abstract.replace(/\n/g, ' ').replace(/\s+/g, ' ').substring(0, 280).trim()
+          ? smartTruncate(
+              pub.abstract.replace(/\n/g, ' ').replace(/\s+/g, ' '),
+              280
+            )
           : null;
 
-        // Format authors
         const authors = (pub.authors || []).slice(0, 4);
         const authorStr = authors.length > 0
           ? authors.join(', ') + (pub.authors?.length > 4 ? ' et al.' : '')
@@ -564,7 +522,7 @@ class LLMService {
         lines.push(`#### 📄 Finding ${i + 1}: ${pub.title}\n`);
 
         if (cleanAbstract) {
-          lines.push(`> *"${cleanAbstract}..."*\n`);
+          lines.push(`> *"${cleanAbstract}"*\n`);
         }
 
         lines.push(`| | |`);
@@ -577,9 +535,7 @@ class LLMService {
       });
     }
 
-    // ══════════════════════════════════════
     // ── CLINICAL TRIALS ──
-    // ══════════════════════════════════════
 
     if (clinicalTrials?.length > 0) {
       lines.push(`---\n`);
@@ -590,30 +546,28 @@ class LLMService {
       clinicalTrials.slice(0, 6).forEach((trial, i) => {
         const title = trial.briefTitle || trial.title;
 
-        // Status emoji
         const statusUpper = (trial.status || '').toUpperCase();
         let statusEmoji = '⚪';
         if (statusUpper.includes('RECRUITING') && !statusUpper.includes('NOT')) statusEmoji = '🟢';
         else if (statusUpper.includes('ACTIVE')) statusEmoji = '🟡';
         else if (statusUpper.includes('COMPLETED')) statusEmoji = '🔵';
 
-        // Location
         const locationStr = trial.locations?.filter(l => l && l !== 'Not specified').slice(0, 2).join('; ') || 'Location not specified';
 
-        // Contact
         const contactStr = trial.contact && trial.contact !== 'Not available'
           ? trial.contact.replace(/\|/g, ',')
           : 'Contact not available';
 
-        // Eligibility preview
+        // ✅ 4 key eligibility points for LLM
         const eligibilityPreview = trial.eligibility
-          ? trial.eligibility
-              .replace(/\*/g, '•')
-              .replace(/\\n/g, ' ')
-              .replace(/<[^>]*>/g, '')
-              .replace(/\\/g, '')
-              .substring(0, 200)
-              .trim()
+          ? smartTruncate(
+              trial.eligibility
+                .replace(/\*/g, '•')
+                .replace(/\\n/g, ' ')
+                .replace(/<[^>]*>/g, '')
+                .replace(/\\/g, ''),
+              400
+            )
           : 'Eligibility criteria not specified';
 
         lines.push(`#### ${statusEmoji} Trial ${i + 1}: ${title}\n`);
@@ -632,13 +586,12 @@ class LLMService {
         lines.push(`| **Registry** | [View on ClinicalTrials.gov →](${trial.url}) |`);
         lines.push(``);
 
-        lines.push(`**Eligibility Preview:** ${eligibilityPreview}...\n`);
+        // ✅ FIX: No extra "..." since smartTruncate handles it
+        lines.push(`**Eligibility Preview:** ${eligibilityPreview}\n`);
       });
     }
 
-    // ══════════════════════════════════════
     // ── ANALYSIS & TAKEAWAYS ──
-    // ══════════════════════════════════════
 
     lines.push(`---\n`);
     lines.push(`### 💡 Analysis & Key Takeaways\n`);
@@ -651,7 +604,7 @@ class LLMService {
       const minYear = Math.min(...yearRange);
       const maxYear = Math.max(...yearRange);
       takeaways.push(`📊 **Research Coverage:** ${publications.length} publications analyzed from ${sources.join(' and ')} (${minYear}–${maxYear})`);
-      
+
       if (recentPubs > 0) {
         takeaways.push(`🆕 **Recent Activity:** ${recentPubs} publications from the last 12 months indicate **active research** in this area`);
       }
@@ -669,9 +622,7 @@ class LLMService {
 
     takeaways.forEach(t => lines.push(`${t}\n`));
 
-    // ══════════════════════════════════════
     // ── METHODOLOGY NOTE ──
-    // ══════════════════════════════════════
 
     lines.push(`---\n`);
     lines.push(`### 🔍 Research Methodology\n`);
@@ -681,9 +632,7 @@ class LLMService {
     lines.push(`3. **Intelligent Ranking** — Applied a 100-point scoring system (relevance + recency + credibility)`);
     lines.push(`4. **Source Verification** — All citations link directly to verified database entries\n`);
 
-    // ══════════════════════════════════════
     // ── DISCLAIMER ──
-    // ══════════════════════════════════════
 
     lines.push(`---\n`);
     lines.push(`> ⚠️ **Medical Disclaimer**  `);
@@ -701,27 +650,11 @@ class LLMService {
 
   // ─── Message Construction ────────────────────────────────
 
-  /**
-   * Builds the complete messages array for the LLM.
-   *
-   * Structure:
-   *   [0]  System prompt (persona + format rules)
-   *   [1…N] Conversation history (for follow-up context)
-   *   [N+1] User prompt (query + research data)
-   *
-   * Token Management:
-   *   - History limited to MAX_HISTORY_MESSAGES
-   *   - Each history message truncated to MAX_HISTORY_CHARS
-   *   - Publications limited to MAX_PUBS_FOR_LLM
-   *   - Abstracts truncated to MAX_ABSTRACT_LENGTH
-   */
   _buildMessages(params) {
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT }
     ];
 
-<<<<<<< HEAD
-    // Add conversation history for follow-up context
     if (params.conversationHistory?.length > 0) {
       const history = params.conversationHistory.slice(-CONFIG.MAX_HISTORY_MESSAGES);
       for (const msg of history) {
@@ -730,361 +663,22 @@ class LLMService {
           content: msg.role === 'assistant'
             ? `[Previous response about: ${msg.content.substring(0, 100)}...]`
             : msg.content.substring(0, CONFIG.MAX_HISTORY_CHARS)
-=======
-    // Add recent conversation history
-    if (conversationHistory && conversationHistory.length > 0) {
-      const recentHistory = conversationHistory.slice(-4);
-      for (const msg of recentHistory) {
-        messages.push({
-          role: msg.role,
-          content: msg.content.substring(0, 300)
->>>>>>> f98f46ce3af57cabbef053c67ce455d3a2522d2c
         });
       }
     }
 
-    // Build user prompt
     messages.push({
       role: 'user',
       content: this._buildUserPrompt(params)
     });
 
-<<<<<<< HEAD
     return messages;
   }
 
-  /**
-   * Constructs the user prompt with all research context.
-   *
-   * Format designed to be easily parsed by the LLM:
-   *   - Clear section headers
-   *   - Numbered sources for easy citation
-   *   - Consistent field labels
-   *   - Explicit instruction at the end
-   */
-=======
-    console.log(`🤖 Using LLM provider: ${this.provider}`);
-
-    try {
-      if (this.provider === 'huggingface') {
-        return await this._generateHuggingFace(messages);
-      } else if (this.provider === 'ollama') {
-        return await this._generateOllama(messages);
-      } else {
-        console.log('⚠️ Unknown provider, using fallback');
-        return this._generateFallback(params);
-      }
-    } catch (error) {
-      console.error('LLM generation error:', error.message);
-      console.log('⚠️ Falling back to template response');
-      return this._generateFallback(params);
-    }
-  }
-
-  /**
-   * HuggingFace Inference API
-   */
-  async _generateHuggingFace(messages) {
-    if (!this.hfToken) {
-      throw new Error('HuggingFace token not set');
-    }
-
-    console.log(`🤗 Calling HuggingFace model: ${this.hfModel}`);
-
-    // Build prompt in Mistral Instruct format
-    let prompt = '<s>';
-    for (const msg of messages) {
-      if (msg.role === 'system') {
-        prompt += `[INST] <<SYS>>\n${msg.content}\n<</SYS>>\n\n`;
-      } else if (msg.role === 'user') {
-        prompt += `${msg.content} [/INST]`;
-      } else if (msg.role === 'assistant') {
-        prompt += ` ${msg.content}</s><s>[INST] `;
-      }
-    }
-
-    try {
-      const response = await axios.post(
-        `https://api-inference.huggingface.co/models/${this.hfModel}`,
-        {
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 1000,
-            temperature: 0.3,
-            top_p: 0.9,
-            return_full_text: false,
-            do_sample: true
-          }
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.hfToken}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 120000
-        }
-      );
-
-      // Handle response
-      if (Array.isArray(response.data) && response.data[0]?.generated_text) {
-        console.log('✅ HuggingFace responded successfully');
-        return response.data[0].generated_text;
-      }
-
-      if (typeof response.data === 'string') {
-        return response.data;
-      }
-
-      throw new Error('Unexpected HuggingFace response format');
-
-    } catch (error) {
-      // Model is loading — wait and retry
-      if (error.response?.status === 503) {
-        const waitTime = error.response?.data?.estimated_time || 30;
-        console.log(`⏳ Model loading, waiting ${waitTime} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
-
-        // Retry once
-        const retryResponse = await axios.post(
-          `https://api-inference.huggingface.co/models/${this.hfModel}`,
-          {
-            inputs: prompt,
-            parameters: {
-              max_new_tokens: 1000,
-              temperature: 0.3,
-              top_p: 0.9,
-              return_full_text: false,
-              do_sample: true
-            }
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${this.hfToken}`,
-              'Content-Type': 'application/json'
-            },
-            timeout: 120000
-          }
-        );
-
-        if (Array.isArray(retryResponse.data) && retryResponse.data[0]?.generated_text) {
-          console.log('✅ HuggingFace responded after retry');
-          return retryResponse.data[0].generated_text;
-        }
-      }
-
-      // Model requires Pro subscription
-      if (error.response?.status === 403) {
-        console.log('❌ Model requires Pro. Trying free model...');
-        return await this._generateHuggingFaceFree(messages);
-      }
-
-      console.error('HuggingFace error:', error.response?.status, error.response?.data?.error || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Fallback to a free HuggingFace model if main model needs Pro
-   */
-  async _generateHuggingFaceFree(messages) {
-    const freeModels = [
-      'google/gemma-2-2b-it',
-      'HuggingFaceH4/zephyr-7b-beta',
-      'microsoft/Phi-3-mini-4k-instruct',
-      'Qwen/Qwen2-1.5B-Instruct'
-    ];
-
-    for (const model of freeModels) {
-      try {
-        console.log(`🔄 Trying free model: ${model}`);
-
-        const prompt = messages.map(m => {
-          if (m.role === 'system') return `System: ${m.content}\n`;
-          if (m.role === 'user') return `User: ${m.content}\n`;
-          if (m.role === 'assistant') return `Assistant: ${m.content}\n`;
-          return m.content;
-        }).join('\n') + '\nAssistant:';
-
-        const response = await axios.post(
-          `https://api-inference.huggingface.co/models/${model}`,
-          {
-            inputs: prompt,
-            parameters: {
-              max_new_tokens: 1000,
-              temperature: 0.3,
-              return_full_text: false
-            }
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${this.hfToken}`,
-              'Content-Type': 'application/json'
-            },
-            timeout: 60000
-          }
-        );
-
-        if (Array.isArray(response.data) && response.data[0]?.generated_text) {
-          console.log(`✅ Free model ${model} worked!`);
-          return response.data[0].generated_text;
-        }
-      } catch (err) {
-        console.log(`❌ ${model} failed:`, err.response?.status || err.message);
-        continue;
-      }
-    }
-
-    throw new Error('All HuggingFace models failed');
-  }
-
-  /**
-   * Ollama local LLM
-   */
-  async _generateOllama(messages) {
-    console.log(`🦙 Calling Ollama: ${this.ollamaModel}`);
-
-    // Try /api/chat first
-    try {
-      const response = await axios.post(`${this.ollamaUrl}/api/chat`, {
-        model: this.ollamaModel,
-        messages,
-        stream: false,
-        options: {
-          temperature: 0.3,
-          num_predict: 800
-        }
-      }, { timeout: 300000 });
-
-      if (response.data?.message?.content) {
-        console.log('✅ Ollama /api/chat worked');
-        return response.data.message.content;
-      }
-    } catch (err) {
-      console.log('❌ /api/chat failed:', err.response?.status || err.message);
-    }
-
-    // Try /api/generate
-    try {
-      const prompt = messages.map(m => `${m.role}: ${m.content}`).join('\n');
-      const response = await axios.post(`${this.ollamaUrl}/api/generate`, {
-        model: this.ollamaModel,
-        prompt,
-        stream: false,
-        options: {
-          temperature: 0.3,
-          num_predict: 800
-        }
-      }, { timeout: 300000 });
-
-      if (response.data?.response) {
-        console.log('✅ Ollama /api/generate worked');
-        return response.data.response;
-      }
-    } catch (err) {
-      console.log('❌ /api/generate failed:', err.response?.status || err.message);
-    }
-
-    // Try OpenAI-compatible endpoint
-    try {
-      const response = await axios.post(`${this.ollamaUrl}/v1/chat/completions`, {
-        model: this.ollamaModel,
-        messages,
-        temperature: 0.3,
-        max_tokens: 800
-      }, { timeout: 300000 });
-
-      if (response.data?.choices?.[0]?.message?.content) {
-        console.log('✅ Ollama /v1/chat/completions worked');
-        return response.data.choices[0].message.content;
-      }
-    } catch (err) {
-      console.log('❌ /v1/chat/completions failed:', err.response?.status || err.message);
-    }
-
-    throw new Error('All Ollama endpoints failed');
-  }
-
-  /**
-   * Fallback — generates structured response WITHOUT any LLM
-   */
-  _generateFallback(params) {
-    const { userQuery, disease, publications, clinicalTrials, patientName } = params;
-
-    let response = '';
-
-    const greeting = patientName ? `**For ${patientName}** — ` : '';
-    response += `## 🏥 ${greeting}Research Summary: ${disease || userQuery}\n\n`;
-
-    response += `### 📋 Condition Overview\n`;
-    response += `Based on your query about **${userQuery}**`;
-    if (disease) response += ` related to **${disease}**`;
-    response += `, here is a comprehensive summary of the latest research findings.\n\n`;
-
-    if (publications && publications.length > 0) {
-      response += `### 📚 Research Insights\n\n`;
-      response += `We analyzed **${publications.length} relevant publications** from PubMed and OpenAlex. Here are the key findings:\n\n`;
-
-      publications.slice(0, 6).forEach((pub, i) => {
-        response += `**${i + 1}. ${pub.title}**\n`;
-        if (pub.abstract) {
-          const snippet = pub.abstract.substring(0, 200);
-          response += `> ${snippet}...\n`;
-        }
-        response += `- *Authors:* ${(pub.authors || []).join(', ') || 'N/A'}\n`;
-        response += `- *Year:* ${pub.year || 'N/A'} | *Source:* ${pub.source}\n`;
-        response += `- *Link:* [View Publication](${pub.url})\n\n`;
-      });
-    }
-
-    if (clinicalTrials && clinicalTrials.length > 0) {
-      response += `### 🧪 Relevant Clinical Trials\n\n`;
-      response += `Found **${clinicalTrials.length} clinical trials** that may be relevant:\n\n`;
-
-      clinicalTrials.slice(0, 4).forEach((trial, i) => {
-        response += `**${i + 1}. ${trial.briefTitle || trial.title}**\n`;
-        response += `- *Status:* ${trial.status}\n`;
-        response += `- *Phase:* ${trial.phase || 'N/A'}\n`;
-        if (trial.locations && trial.locations[0] !== 'Not specified') {
-          response += `- *Location:* ${trial.locations.slice(0, 2).join('; ')}\n`;
-        }
-        if (trial.contact && trial.contact !== 'Not available') {
-          response += `- *Contact:* ${trial.contact}\n`;
-        }
-        response += `- *Link:* [View Trial](${trial.url})\n\n`;
-      });
-    }
-
-    response += `\n---\n*⚠️ This information is for research purposes only and should not replace professional medical advice. Always consult with qualified healthcare providers.*`;
-
-    return response;
-  }
-
-  _buildSystemPrompt() {
-    return `You are Curalink, an AI Medical Research Assistant. Provide structured, accurate, research-backed medical information.
-
-RULES:
-1. ONLY use information from the provided research data
-2. NEVER fabricate or hallucinate information
-3. ALWAYS cite sources with titles and links
-4. Structure response with clear sections
-5. Be specific and personalized based on user condition
-6. Add medical disclaimer at the end
-
-RESPONSE FORMAT:
-1. **Condition Overview** - Brief context
-2. **Research Insights** - Key findings with citations
-3. **Clinical Trials** - Relevant trials if available
-4. **Key Takeaways** - Actionable summary
-
-Keep response concise but thorough. Use markdown formatting.`;
-  }
-
->>>>>>> f98f46ce3af57cabbef053c67ce455d3a2522d2c
   _buildUserPrompt(params) {
     const { userQuery, disease, publications, clinicalTrials, patientName } = params;
     const sections = [];
 
-<<<<<<< HEAD
     // ── Request Context ──
     sections.push('╔══════════════════════════════════════╗');
     sections.push('║       RESEARCH REQUEST DETAILS        ║');
@@ -1107,8 +701,13 @@ Keep response concise but thorough. Use markdown formatting.`;
       pubs.forEach((pub, i) => {
         const authors = (pub.authors || []).slice(0, 4).join(', ');
         const authorStr = pub.authors?.length > 4 ? `${authors} et al.` : authors || 'N/A';
+
+        // ✅ FIX: Smart truncation for abstract
         const abstract = pub.abstract
-          ? pub.abstract.substring(0, CONFIG.MAX_ABSTRACT_LENGTH).replace(/\n/g, ' ').trim()
+          ? smartTruncate(
+              pub.abstract.replace(/\n/g, ' ').trim(),
+              CONFIG.MAX_ABSTRACT_LENGTH
+            )
           : 'No abstract available';
 
         sections.push('');
@@ -1140,8 +739,12 @@ Keep response concise but thorough. Use markdown formatting.`;
           ? trial.contact.replace(/\|/g, ',')
           : 'Not available';
 
+        // ✅ 4 key eligibility points sent to LLM
         const eligibilityStr = trial.eligibility
-          ? trial.eligibility.replace(/\*/g, '•').replace(/\n/g, ' ').substring(0, 200).trim()
+          ? smartTruncate(
+              trial.eligibility.replace(/\*/g, '•').replace(/\n/g, ' '),
+              400
+            )
           : 'Not specified';
 
         sections.push('');
@@ -1173,53 +776,16 @@ Keep response concise but thorough. Use markdown formatting.`;
     sections.push('7. End with methodology section and disclaimer');
     sections.push('8. Use markdown tables, blockquotes, and emojis as specified');
     sections.push('9. ONLY cite data from the sources above — NO external knowledge');
-=======
-    let prompt = `## Query\n`;
-    if (patientName) prompt += `Patient: ${patientName}\n`;
-    if (disease) prompt += `Condition: ${disease}\n`;
-    prompt += `Question: ${userQuery}\n\n`;
-
-    if (publications && publications.length > 0) {
-      prompt += `## Research Publications (${publications.length} results)\n\n`;
-      publications.forEach((pub, i) => {
-        prompt += `${i + 1}. "${pub.title}"\n`;
-        prompt += `   Authors: ${(pub.authors || []).slice(0, 2).join(', ')}\n`;
-        prompt += `   Year: ${pub.year} | Source: ${pub.source}\n`;
-        prompt += `   URL: ${pub.url}\n`;
-        if (pub.abstract) {
-          prompt += `   Summary: ${pub.abstract.substring(0, 200)}\n`;
-        }
-        prompt += '\n';
-      });
-    }
-
-    if (clinicalTrials && clinicalTrials.length > 0) {
-      prompt += `## Clinical Trials (${clinicalTrials.length} results)\n\n`;
-      clinicalTrials.forEach((trial, i) => {
-        prompt += `${i + 1}. "${trial.briefTitle || trial.title}"\n`;
-        prompt += `   Status: ${trial.status}\n`;
-        prompt += `   URL: ${trial.url}\n`;
-        if (trial.briefSummary) {
-          prompt += `   Summary: ${trial.briefSummary.substring(0, 150)}\n`;
-        }
-        prompt += '\n';
-      });
-    }
-
-    prompt += `\nProvide a structured research summary. Cite sources with titles and URLs. Be concise.`;
->>>>>>> f98f46ce3af57cabbef053c67ce455d3a2522d2c
 
     return sections.join('\n');
   }
 
   // ─── Utilities ───────────────────────────────────────────
 
-  /** Promise-based sleep */
   _sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  /** Logs service initialization state */
   _logInitialization() {
     console.log('');
     console.log('╔══════════════════════════════════════════╗');
@@ -1244,9 +810,4 @@ Keep response concise but thorough. Use markdown formatting.`;
   }
 }
 
-<<<<<<< HEAD
 module.exports = new LLMService();
-=======
-module.exports = new LLMService();
- 
->>>>>>> f98f46ce3af57cabbef053c67ce455d3a2522d2c
