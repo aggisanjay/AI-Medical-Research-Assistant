@@ -59,7 +59,9 @@ function smartTruncate(text, maxLength) {
 // ─── Configuration Constants ─────────────────────────────
 
 const CONFIG = {
+
   MAX_RESPONSE_TOKENS: 8500,
+
   TEMPERATURE: 0.2,
   MAX_PUBS_FOR_LLM: 6,
   MAX_TRIALS_FOR_LLM: 4,
@@ -558,7 +560,9 @@ class LLMService {
           ? trial.contact.replace(/\|/g, ',')
           : 'Contact not available';
 
+
         // ✅ 4 key eligibility points for LLM
+
         const eligibilityPreview = trial.eligibility
           ? smartTruncate(
               trial.eligibility
@@ -566,7 +570,9 @@ class LLMService {
                 .replace(/\\n/g, ' ')
                 .replace(/<[^>]*>/g, '')
                 .replace(/\\/g, ''),
+
               400
+
             )
           : 'Eligibility criteria not specified';
 
@@ -739,11 +745,13 @@ class LLMService {
           ? trial.contact.replace(/\|/g, ',')
           : 'Not available';
 
+
         // ✅ 4 key eligibility points sent to LLM
         const eligibilityStr = trial.eligibility
           ? smartTruncate(
               trial.eligibility.replace(/\*/g, '•').replace(/\n/g, ' '),
               400
+
             )
           : 'Not specified';
 
@@ -809,5 +817,6 @@ class LLMService {
     console.log('');
   }
 }
+
 
 module.exports = new LLMService();

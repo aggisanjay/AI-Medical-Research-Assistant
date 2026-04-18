@@ -178,7 +178,9 @@ class ClinicalTrialsService {
         eligibility.sex ? `Sex: ${eligibility.sex}` : ''
       ].filter(Boolean).join('\n');
 
+
       const eligibilityText = smartTruncate(rawEligibility, 2000);
+
 
       const nctId = identification.nctId || '';
 
