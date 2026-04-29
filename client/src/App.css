@@ -130,6 +130,36 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 0 16px 20px;
+  scrollbar-width: none; /* Firefox: hide by default */
+  -ms-overflow-style: none; /* IE/Edge: hide by default */
+}
+
+.sidebar-conversations:hover {
+  scrollbar-width: thin; /* Firefox: show on hover */
+  scrollbar-color: var(--border-light) transparent;
+}
+
+/* Webkit-based browsers (Chrome, Safari, Edge) */
+.sidebar-conversations::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-conversations::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-conversations::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-conversations:hover::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+}
+
+.sidebar-conversations::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
 }
 
 .sidebar-label {
