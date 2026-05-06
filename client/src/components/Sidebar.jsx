@@ -3,7 +3,7 @@ import { PlusCircle, MessageSquare, History, Activity, Sparkles, Trash2 } from '
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 
-function Sidebar({ activeConversation, onNewChat, onSelectConversation, refreshTrigger }) {
+function Sidebar({ activeConversation, onNewChat, onSelectConversation, refreshTrigger, isOpen, onClose }) {
   const [conversations, setConversations] = useState([]);
 
   useEffect(() => {
@@ -54,68 +54,71 @@ function Sidebar({ activeConversation, onNewChat, onSelectConversation, refreshT
   };
 
   return (
-    <div className="sidebar">
-      <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <div className="logo-icon">
-            <Activity size={24} />
+    <>
+      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <div className="logo-icon">
+              <Activity size={24} />
+            </div>
+            <h1>Curalink</h1>
           </div>
-          <h1>Curalink</h1>
-        </div>
-        <motion.button
-          className="new-chat-btn"
-          onClick={onNewChat}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Sparkles size={18} />
-          New Research Chat
-        </motion.button>
-      </div>
-
-      <div className="sidebar-conversations">
-        <div className="sidebar-label">
-          <History size={12} style={{ marginRight: '6px' }} />
-          Recent Research
+          <motion.button
+            className="new-chat-btn"
+            onClick={onNewChat}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Sparkles size={18} />
+            New Research Chat
+          </motion.button>
         </div>
 
-        <AnimatePresence>
-          {conversations.map((conv, index) => (
-            <motion.div
-              key={conv.conversationId}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className={`conv-item ${activeConversation === conv.conversationId ? 'active' : ''}`}
-              onClick={() => onSelectConversation(conv.conversationId)}
-            >
-              <div className="conv-item-content">
-                <div className="conv-item-title">
-                  {conv.disease || conv.lastMessage || 'New Conversation'}
-                </div>
-                <div className="conv-item-meta">
-                  <MessageSquare size={10} />
-                  {conv.messageCount} messages · {formatTime(conv.updatedAt)}
-                </div>
-              </div>
-              <button 
-                className="delete-conv-btn" 
-                onClick={(e) => handleDelete(e, conv.conversationId)}
-                title="Delete Chat"
+        <div className="sidebar-conversations">
+          <div className="sidebar-label">
+            <History size={12} style={{ marginRight: '6px' }} />
+            Recent Research
+          </div>
+
+          <AnimatePresence>
+            {conversations.map((conv, index) => (
+              <motion.div
+                key={conv.conversationId}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={`conv-item ${activeConversation === conv.conversationId ? 'active' : ''}`}
+                onClick={() => onSelectConversation(conv.conversationId)}
               >
-                <Trash2 size={14} />
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+                <div className="conv-item-content">
+                  <div className="conv-item-title">
+                    {conv.disease || conv.lastMessage || 'New Conversation'}
+                  </div>
+                  <div className="conv-item-meta">
+                    <MessageSquare size={10} />
+                    {conv.messageCount} messages · {formatTime(conv.updatedAt)}
+                  </div>
+                </div>
+                <button 
+                  className="delete-conv-btn" 
+                  onClick={(e) => handleDelete(e, conv.conversationId)}
+                  title="Delete Chat"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
-        {conversations.length === 0 && (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-            No research history found.
-          </div>
-        )}
+          {conversations.length === 0 && (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+              No research history found.
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+      {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
+    </>
   );
 }
 

@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, MessageSquare, ClipboardList, Activity, Sparkles, Brain, Stethoscope, Heart, Search } from 'lucide-react';
+import { Send, MessageSquare, ClipboardList, Activity, Sparkles, Brain, Stethoscope, Heart, Search, Menu } from 'lucide-react';
 import api from '../services/api';
 import MessageBubble from './MessageBubble';
 import StructuredInput from './StructuredInput';
 import VoiceAssistant from './VoiceAssistant';
 
-function ChatInterface({ conversationId, setConversationId, onConversationUpdate }) {
+function ChatInterface({ conversationId, setConversationId, onConversationUpdate, toggleSidebar }) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -150,11 +150,16 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
-        <div>
-          <div className="chat-header-title">Medical Research Assistant</div>
-          <div className="chat-header-subtitle">
-            <span className="pulse-indicator"></span>
-            Powered by AI · PubMed · OpenAlex · ClinicalTrials.gov
+        <div className="header-left">
+          <button className="mobile-menu-btn" onClick={toggleSidebar}>
+            <Menu size={24} />
+          </button>
+          <div>
+            <div className="chat-header-title">Medical Assistant</div>
+            <div className="chat-header-subtitle">
+              <span className="pulse-indicator"></span>
+              <span className="hide-mobile">Powered by AI · PubMed · OpenAlex</span>
+            </div>
           </div>
         </div>
         <div className="input-mode-toggle">
