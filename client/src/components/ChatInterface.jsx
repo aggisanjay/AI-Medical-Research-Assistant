@@ -4,6 +4,7 @@ import { Send, MessageSquare, ClipboardList, Activity, Sparkles, Brain, Stethosc
 import api from '../services/api';
 import MessageBubble from './MessageBubble';
 import StructuredInput from './StructuredInput';
+import VoiceAssistant from './VoiceAssistant';
 
 function ChatInterface({ conversationId, setConversationId, onConversationUpdate }) {
   const [messages, setMessages] = useState([]);
@@ -131,6 +132,16 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
     sendMessage({ message: query });
   };
 
+  const handleSpeechToText = (text) => {
+    if (text.trim()) {
+      setInputText(''); // Clear input text since we're sending
+      sendMessage({ message: text.trim() });
+    }
+  };
+
+
+  const lastAssistantMessage = [...messages].reverse().find(m => m.role === 'assistant')?.content;
+
   return (
     <div className="main-content">
       {/* Header */}
@@ -225,9 +236,9 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
           ) : (
             <>
               {messages.map((msg, i) => (
-                <MessageBubble 
-                  key={i} 
-                  message={msg} 
+                <MessageBubble
+                  key={i}
+                  message={msg}
                   isLatest={i === messages.length - 1}
                   onQuickAction={handleQuickAction}
                 />
@@ -269,15 +280,22 @@ function ChatInterface({ conversationId, setConversationId, onConversationUpdate
                 disabled={isLoading}
                 rows={1}
               />
-              <motion.button
-                type="submit"
-                className="send-btn"
-                disabled={isLoading || !inputText.trim()}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Send size={18} />
-              </motion.button>
+              <div className="input-actions-group">
+                <VoiceAssistant 
+                  onSpeechToText={handleSpeechToText}
+                  lastAssistantMessage={lastAssistantMessage}
+                  isLoading={isLoading}
+                />
+                <motion.button
+                  type="submit"
+                  className="send-btn"
+                  disabled={isLoading || !inputText.trim()}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Send size={18} />
+                </motion.button>
+              </div>
             </form>
           ) : (
             <StructuredInput onSubmit={handleStructuredSubmit} isLoading={isLoading} />

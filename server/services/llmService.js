@@ -111,6 +111,8 @@ Your job: Take raw research data (publications + clinical trials) → Synthesize
 4. If data is limited, say: "Based on available research data, information on this specific aspect is limited"
 5. Do NOT add information from your training data — ONLY from the provided sources
 6. Do NOT recommend specific treatments or medications — present research findings objectively
+7. If NO clinical trials are found in the provided data, state: "Our current search of ClinicalTrials.gov did not identify any active or completed trials matching these specific criteria at this time."
+8. If NO publications are found, state: "A search across PubMed and OpenAlex did not yield specific peer-reviewed publications for this particular query."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   MANDATORY RESPONSE FORMAT
@@ -122,6 +124,7 @@ You MUST follow this EXACT structure. Do not skip any section.
 
 
 **Research Query:** [User's original query]
+
 
 **Sources Analyzed:** PubMed · OpenAlex · ClinicalTrials.gov
 
@@ -135,7 +138,7 @@ You MUST follow this EXACT structure. Do not skip any section.
 
 ### 📚 Research Insights (from publications)
 
-We identified the following key research insights from peer-reviewed publications:
+[If publications are found, list them as instructed. If NONE are found, use the standard "No publications found" message mentioned in rule 8.]
 
 #### 📄 Insight 1: [Create a descriptive theme title based on the paper]
 
@@ -168,7 +171,7 @@ We identified the following key research insights from peer-reviewed publication
 
 ### 🧪 Clinical Trials
 
-The following clinical trials are relevant to this research area:
+[If trials are found, list them as instructed. If NONE are found, use the standard "No trials found" message mentioned in rule 7.]
 
 #### 🟢 Trial 1: [Trial Title]
 
@@ -535,6 +538,8 @@ class LLMService {
         lines.push(`| **Access** | [Read Full Publication →](${pub.url}) |`);
         lines.push(``);
       });
+    } else {
+      lines.push(`A search across PubMed and OpenAlex did not yield specific peer-reviewed publications for this particular query.\n`);
     }
 
     // ── CLINICAL TRIALS ──
@@ -595,6 +600,10 @@ class LLMService {
         // ✅ FIX: No extra "..." since smartTruncate handles it
         lines.push(`**Eligibility Preview:** ${eligibilityPreview}\n`);
       });
+    } else {
+      lines.push(`---\n`);
+      lines.push(`### 🧪 Clinical Trials Overview\n`);
+      lines.push(`Our current search of **ClinicalTrials.gov** did not identify any active or completed trials matching these specific criteria at this time. This may be due to the rarity of the condition or the specific nature of the research query.\n`);
     }
 
     // ── ANALYSIS & TAKEAWAYS ──
@@ -725,6 +734,9 @@ class LLMService {
         sections.push(`URL:      ${pub.url}`);
         sections.push(`Abstract: ${abstract}`);
       });
+    } else {
+      sections.push('\n[DATABASE STATUS: NO PUBLICATIONS FOUND]');
+      sections.push('Reason: No peer-reviewed papers matching the specific query and disease context were identified in PubMed or OpenAlex.');
     }
 
     // ── Clinical Trials Data ──
@@ -765,6 +777,9 @@ class LLMService {
         sections.push(`Eligibility: ${eligibilityStr}`);
         sections.push(`URL:         ${trial.url}`);
       });
+    } else {
+      sections.push('\n[DATABASE STATUS: NO CLINICAL TRIALS FOUND]');
+      sections.push('Reason: Our search of ClinicalTrials.gov did not identify any trials matching these specific criteria. Please state this clearly in your report.');
     }
 
     // ── Generation Instructions ──
