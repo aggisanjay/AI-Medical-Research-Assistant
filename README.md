@@ -2,7 +2,6 @@
 
 Curalink is a sophisticated, AI-driven medical research assistant designed to empower researchers and healthcare professionals by aggregating, ranking, and summarizing clinical and academic data from multiple trusted sources.
 
-![Curalink Preview](https://ai-medical-research-assistant.vercel.app/) *Note: Replace with actual screenshot path if available.*
 
 ## 🌟 Key Features
 
