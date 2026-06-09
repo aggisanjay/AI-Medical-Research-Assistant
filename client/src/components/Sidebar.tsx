@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { 
   Plus, MessageSquare, Trash2, Activity, Loader2,
-  Home, Settings, ChevronLeft, ChevronRight
+  Home, Settings, ChevronLeft, ChevronRight, LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUser } from "@clerk/react";
 
 interface SidebarProps {
   activeTab: string;
@@ -22,21 +23,8 @@ export function Sidebar({
   activeTab, onTabChange, activeId, onSelect, onNew, items, loading, onLogout, onDelete, refreshKey 
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [userName, setUserName] = useState("Dr. Sarah Jenkins");
-
-  useEffect(() => {
-    const profileStr = localStorage.getItem("curalink_user_profile");
-    if (profileStr) {
-      try {
-        const profile = JSON.parse(profileStr);
-        if (profile && profile.name) {
-          setUserName(profile.name);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }, [refreshKey, activeTab]);
+  const { user } = useUser();
+  const userName = user?.fullName || "Dr. Sarah Jenkins";
 
   const initials = userName
     ? userName
@@ -202,7 +190,10 @@ export function Sidebar({
 
       {/* Sidebar Footer with Sign Out */}
       <div className="border-t border-sidebar-border px-4 py-3 flex flex-col gap-2 bg-slate-950/40">
-        <div className="flex items-center justify-between gap-2">
+        <div className={cn(
+          "flex items-center gap-2",
+          isCollapsed ? "flex-col justify-center" : "justify-between"
+        )}>
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="h-7 w-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-white uppercase shrink-0">
               {initials}
@@ -214,12 +205,21 @@ export function Sidebar({
               </div>
             )}
           </div>
-          {!isCollapsed && (
+          {!isCollapsed ? (
             <button
               onClick={onLogout}
-              className="text-[10px] font-semibold text-red-400 hover:text-red-300 hover:underline shrink-0 cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-red-500/20 hover:border-red-500/40 bg-red-500/5 hover:bg-red-500/10 text-[10px] font-semibold text-red-400 hover:text-red-300 transition-all duration-200 shrink-0 cursor-pointer"
             >
-              Sign Out
+              <LogOut className="h-3 w-3" />
+              <span>Sign Out</span>
+            </button>
+          ) : (
+            <button
+              onClick={onLogout}
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-red-500/20 hover:border-red-500/40 bg-red-500/5 hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-all duration-200 cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
             </button>
           )}
         </div>

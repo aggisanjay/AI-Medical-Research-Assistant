@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { 
   Activity, Loader2, Sparkles, FlaskConical, BookOpen, 
   Globe, Bell, HelpCircle, ChevronDown, 
-  ShieldCheck, ArrowUpRight, Cpu 
+  ShieldCheck, ArrowUpRight, Cpu, LogOut
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { StructuredInput } from "@/components/StructuredInput";
@@ -14,14 +14,14 @@ import { cn } from "@/lib/utils";
 import { LoginView } from "@/components/LoginView";
 import { DashboardView } from "@/components/DashboardView";
 import { SettingsView } from "@/components/SettingsView";
+import { useUser, useClerk, Show, UserButton } from "@clerk/react";
 
 export function CuralinkApp() {
-  // Session State Gate
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem("curalink_logged_in") === "true";
-  });
+  const { isLoaded, isSignedIn, user } = useUser();
+  const { signOut } = useClerk();
+
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [userName, setUserName] = useState("Dr. Sarah Jenkins");
+  const userName = user?.fullName || "Dr. Sarah Jenkins";
 
   // Centralized History States
   const [conversations, setConversations] = useState<any[]>([]);
@@ -42,23 +42,6 @@ export function CuralinkApp() {
     }
   }, [messages, sending, activeTab]);
 
-  // Load dynamic credentials
-  useEffect(() => {
-    if (isLoggedIn) {
-      const profileStr = localStorage.getItem("curalink_user_profile");
-      if (profileStr) {
-        try {
-          const profile = JSON.parse(profileStr);
-          if (profile && profile.name) {
-            setUserName(profile.name);
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-  }, [isLoggedIn, activeTab]);
-
   const initials = userName
     ? userName
         .split(" ")
@@ -71,7 +54,7 @@ export function CuralinkApp() {
 
   // Centralized fetch conversations list
   const fetchConversations = () => {
-    if (!isLoggedIn) return;
+    if (!isSignedIn) return;
     setLoadingConversations(true);
     api.listConversations()
       .then((res) => setConversations(res.data || []))
@@ -81,10 +64,10 @@ export function CuralinkApp() {
 
   useEffect(() => {
     fetchConversations();
-  }, [isLoggedIn, refreshKey]);
+  }, [isSignedIn, refreshKey]);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isSignedIn) return;
     if (!conversationId) {
       setMessages([]);
       return;
@@ -93,23 +76,13 @@ export function CuralinkApp() {
       .getConversation(conversationId)
       .then((res) => setMessages(res.data?.messages || []))
       .catch(() => setMessages([]));
-  }, [conversationId, isLoggedIn]);
+  }, [conversationId, isSignedIn]);
 
-  const handleLoginSuccess = (profile: { name: string; email: string }) => {
-    localStorage.setItem("curalink_logged_in", "true");
-    localStorage.setItem("curalink_user_profile", JSON.stringify(profile));
-    setUserName(profile.name);
-    setIsLoggedIn(true);
-    setRefreshKey((k) => k + 1);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("curalink_logged_in");
-    localStorage.removeItem("curalink_user_profile");
+  const handleLogout = async () => {
     setConversationId(null);
     setMessages([]);
-    setIsLoggedIn(false);
     setActiveTab("dashboard");
+    await signOut();
     setRefreshKey((k) => k + 1);
   };
 
@@ -262,8 +235,19 @@ export function CuralinkApp() {
     );
   };
 
-  if (!isLoggedIn) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[#020617] text-white">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+          <span className="text-sm font-semibold tracking-wide text-slate-400">Loading Workspace...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return <LoginView />;
   }
 
   return (
@@ -306,23 +290,13 @@ export function CuralinkApp() {
             </button>
 
             {/* Profile Dropdown */}
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-800/80 cursor-pointer group relative py-2">
-              <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold shadow-md uppercase">
-                {initials}
-              </div>
-              <span className="hidden md:inline-block text-xs font-semibold text-slate-300 group-hover:text-white transition-colors">
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800/80 py-2">
+              <Show when="signed-in">
+                <UserButton />
+              </Show>
+              <span className="hidden md:inline-block text-xs font-semibold text-slate-350">
                 {userName}
               </span>
-              <ChevronDown className="hidden md:block h-3.5 w-3.5 text-slate-500" />
-              
-              <div className="absolute right-0 top-full mt-1.5 w-36 py-1 bg-slate-950 border border-slate-800 rounded-xl shadow-xl opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto transition-all z-50">
-                <button 
-                  onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-slate-900 hover:text-red-300 transition-colors font-semibold"
-                >
-                  Sign Out
-                </button>
-              </div>
             </div>
           </div>
         </header>
