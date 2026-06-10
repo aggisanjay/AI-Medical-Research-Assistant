@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'assistant', 'system'], required: true },
   content: { type: String, required: true },
+  responseMode: { type: String, enum: ['standard', 'executive', 'document'], default: 'standard' },
   structuredInput: {
     patientName: String,
     disease: String,
@@ -36,6 +37,17 @@ const messageSchema = new mongoose.Schema({
     processingTimeMs: Number
   },
   suggestedQuestions: [String],
+  workflowSteps: [{
+    agent: String,
+    status: { type: String, enum: ['pending', 'running', 'completed', 'failed'], default: 'completed' },
+    durationMs: Number,
+    metadata: mongoose.Schema.Types.Mixed
+  }],
+  documentChunks: [{
+    filename: String,
+    score: Number,
+    excerpt: String
+  }],
   timestamp: { type: Date, default: Date.now }
 });
 
@@ -46,6 +58,7 @@ const conversationSchema = new mongoose.Schema({
   patientName: { type: String, default: '' },
   locationContext: { type: String, default: '' },
   messages: [messageSchema],
+  attachedDocumentIds: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

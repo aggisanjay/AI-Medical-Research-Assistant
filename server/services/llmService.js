@@ -95,6 +95,60 @@ const HF_ROUTER_URL = 'https://router.huggingface.co/v1/chat/completions';
 
 // ─── System Prompt ───────────────────────────────────────────
 
+const EXECUTIVE_SYSTEM_PROMPT = `You are **Curalink**, a premium AI Medical Research Assistant operating in **Executive Decision-Support Mode**.
+
+You are NOT a chatbot. You are a **Decision-Support and Reasoning Engine** for executives and healthcare leaders.
+
+Your job: Take raw research data (publications + clinical trials) → Synthesize into an executive CEO-level briefing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  EXECUTIVE STYLE GUIDELINES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Focus on decision-making: Synthesize evidence to support strategic choices.
+2. Avoid academic, dense, or overly passive language. Be direct, business-oriented, and clear.
+3. Prioritize actionable insights: Highlight what findings mean in practice.
+4. Highlight risks, tradeoffs, and gaps in the research.
+5. Produce concise briefings, not research papers.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  GROUNDING RULES (STRICT - NEVER BREAK)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Use ONLY the data provided in the research sources.
+2. NEVER fabricate, assume, or hallucinate any fact, statistic, or citation.
+3. If data is limited, state the gaps in the Risks or Opportunities section.
+4. Do NOT add information from your training data — ONLY from the provided sources.
+5. Objectively synthesize clinical data without providing medical prescriptions.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MANDATORY RESPONSE FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You MUST follow this EXACT structure. Do not include any introductory or concluding conversational text.
+
+## Executive Brief
+
+### Key Findings
+* [Bullet point detailing key discovery, clinical efficacy, or finding from the research, citing the source paper/trial where relevant]
+* [Another key finding bullet point]
+
+### Risks
+* [Bullet point identifying clinical risks, limitations, safety issues, or gaps in the evidence]
+* [Another risk bullet point]
+
+### Opportunities
+* [Bullet point highlighting future potential clinical benefits, trial enrollment possibilities, or market pathways]
+* [Another opportunity bullet point]
+
+### Recommended Actions
+* [Bullet point outlining recommended strategic next steps based on the findings]
+* [Another recommended action bullet point]
+
+### Confidence Assessment
+* [State either High, Medium, or Low based on the quality/volume of evidence, followed by a brief 1-sentence explanation]
+
+### Sources Used
+* Source count: [Insert total number of distinct source papers/trials analyzed, e.g., 6]
+* Citation count: [Insert total number of citations used, e.g., 4]`;
+
 const SYSTEM_PROMPT = `You are **Curalink**, a premium AI Medical Research Assistant developed to deliver structured, evidence-based research reports.
 
 You are NOT a chatbot. You are a **Research + Reasoning Engine**.
@@ -228,6 +282,31 @@ This report was generated through Curalink's automated pipeline:
 • Ensure tables have the separator line \`|:---|:---|\`.
 • Use blockquotes (>) for evidence snippets.
 • End with exactly 4 suggested questions.`;
+
+const DOCUMENT_SYSTEM_PROMPT = `You are **Curalink**, a premium AI Medical Research Assistant operating in **Document Q&A Mode**.
+
+Your job: Take the provided context from the user's uploaded documents and answer their query accurately and directly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  DOCUMENT GROUNDING RULES (STRICT - NEVER BREAK)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Use ONLY the facts, figures, and excerpts from the "Provided Document Chunks" section below.
+2. NEVER mention PubMed, OpenAlex, or ClinicalTrials.gov, unless they are explicitly referenced inside the uploaded document's chunks.
+3. If the answer cannot be found in the provided document chunks, say: "Based on the attached document(s), I could not find information to answer this question." Do NOT make up answers or use external training knowledge.
+4. Keep the output clean, professional, and well-structured.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MANDATORY RESPONSE FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You MUST structure your response with clear headings as appropriate for the question. Since this is an analysis of a local file, do not format it as an external database research report. Use standard markdown.
+
+Always conclude your answer with a short summary of which attached document(s) were used to synthesize the answer.
+
+### ✨ Suggested Follow-Up Questions
+1. What other details does the document provide on this topic?
+2. Are there conflicting arguments or findings in the document?
+3. What is the source or methodology described in this file?
+4. How does this finding impact our understanding of the patient context?`;
 
 // ─── Main Service Class ──────────────────────────────────
 
@@ -450,13 +529,89 @@ class LLMService {
   // ─── Fallback: Template Engine ───────────────────────────
 
   _buildFallbackResponse(params) {
-    const { userQuery, disease, publications, clinicalTrials, patientName } = params;
+    const { userQuery, disease, publications, clinicalTrials, patientName, responseMode } = params;
     const lines = [];
     const currentYear = new Date().getFullYear();
     const topic = disease || userQuery;
     const timestamp = new Date().toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric'
     });
+
+    if (responseMode === 'document') {
+      const chunksCount = params.documentChunks?.length || 0;
+      lines.push(`## Document Q&A Analysis (Fallback Mode)\n`);
+      lines.push(`**Research Query:** ${topic}\n`);
+      lines.push(`**Document Source Context:** ${chunksCount} relevant sections retrieved.\n`);
+      lines.push(`---\n`);
+      if (chunksCount > 0) {
+        lines.push(`### Relevant Excerpts found in attached documents:\n`);
+        params.documentChunks.forEach((chunk, i) => {
+          lines.push(`#### Excerpt ${i + 1} (Match: ${(chunk.score * 100).toFixed(0)}% from ${chunk.filename})\n`);
+          lines.push(`> "${chunk.text.trim()}"\n`);
+        });
+      } else {
+        lines.push(`No matching content could be retrieved from the attached documents for this query.`);
+      }
+      lines.push(`\n---\n`);
+      lines.push(`### ✨ Suggested Follow-Up Questions`);
+      lines.push(`1. What other details does the document provide on this topic?`);
+      lines.push(`2. Are there conflicting arguments or findings in the document?`);
+      lines.push(`3. What is the source or methodology described in this file?`);
+      lines.push(`4. How does this finding impact our understanding of the patient context?`);
+      return lines.join('\n');
+    }
+
+    if (responseMode === 'executive') {
+      const pubCount = publications?.length || 0;
+      const trialCount = clinicalTrials?.length || 0;
+      const totalCount = pubCount + trialCount;
+
+      lines.push(`## Executive Brief\n`);
+      
+      lines.push(`### Key Findings\n`);
+      if (publications?.length > 0) {
+        publications.slice(0, 3).forEach(pub => {
+          lines.push(`* Key publications highlight clinical relevance and findings in relation to ${topic} (${pub.year || 'N/A'}).`);
+        });
+      } else {
+        lines.push(`* No peer-reviewed publications were found for ${topic} in PubMed or OpenAlex.`);
+      }
+      lines.push(``);
+
+      lines.push(`### Risks\n`);
+      if (clinicalTrials?.length === 0) {
+        lines.push(`* Gaps in trial data: No clinical trials were matching the specific query on ClinicalTrials.gov.`);
+      } else {
+        lines.push(`* Clinical efficacy is under assessment as clinical trials are currently in progress.`);
+      }
+      lines.push(`* Limited retrieval density from local databases may skew comprehensive evaluations.`);
+      lines.push(``);
+
+      lines.push(`### Opportunities\n`);
+      if (clinicalTrials?.length > 0) {
+        const recruiting = clinicalTrials.filter(t => t.status?.toLowerCase().includes('recruiting')).length;
+        if (recruiting > 0) {
+          lines.push(`* Active trial engagement: ${recruiting} recruiting trials identified for patient mapping.`);
+        }
+      }
+      lines.push(`* Multi-database query expansion provides opportunities to cross-examine emerging therapies.`);
+      lines.push(``);
+
+      lines.push(`### Recommended Actions\n`);
+      lines.push(`* Verify trial eligibility details for potential study matching.`);
+      lines.push(`* Consult a clinical oncology team to review literature applicability.`);
+      lines.push(``);
+
+      lines.push(`### Confidence Assessment\n`);
+      lines.push(`* ${totalCount > 5 ? 'Medium' : 'Low'} (Based on retrieval density of ${pubCount} publications and ${trialCount} trials)`);
+      lines.push(``);
+
+      lines.push(`### Sources Used\n`);
+      lines.push(`* Source count: ${totalCount}`);
+      lines.push(`* Citation count: ${pubCount}`);
+
+      return lines.join('\n');
+    }
 
     // ── REPORT HEADER ──
 
@@ -660,8 +815,15 @@ class LLMService {
   // ─── Message Construction ────────────────────────────────
 
   _buildMessages(params) {
+    let systemPrompt = SYSTEM_PROMPT;
+    if (params.responseMode === 'executive') {
+      systemPrompt = EXECUTIVE_SYSTEM_PROMPT;
+    } else if (params.responseMode === 'document') {
+      systemPrompt = DOCUMENT_SYSTEM_PROMPT;
+    }
+
     const messages = [
-      { role: 'system', content: SYSTEM_PROMPT }
+      { role: 'system', content: systemPrompt }
     ];
 
     if (params.conversationHistory?.length > 0) {
@@ -685,7 +847,7 @@ class LLMService {
   }
 
   _buildUserPrompt(params) {
-    const { userQuery, disease, publications, clinicalTrials, patientName } = params;
+    const { userQuery, disease, publications, clinicalTrials, documentChunks, patientName, responseMode } = params;
     const sections = [];
 
     // ── Request Context ──
@@ -699,81 +861,103 @@ class LLMService {
     if (disease) sections.push(`🏥 Disease Context: ${disease}`);
     sections.push(`📅 Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
 
-    // ── Publications Data ──
-    const pubs = (publications || []).slice(0, CONFIG.MAX_PUBS_FOR_LLM);
-    if (pubs.length > 0) {
+    // ── Uploaded Document Context (RAG) ──
+    const docs = (documentChunks || []).slice(0, 5);
+    if (docs.length > 0) {
       sections.push('');
       sections.push('╔══════════════════════════════════════╗');
-      sections.push(`║   PUBLICATIONS (${pubs.length} sources)              ║`);
+      sections.push(`║   UPLOADED DOCUMENTS (${docs.length} chunks)       ║`);
       sections.push('╚══════════════════════════════════════╝');
+      sections.push('Use these excerpts as primary context when answering document-related questions.');
+      sections.push('Cite the source filename when referencing uploaded document content.');
 
-      pubs.forEach((pub, i) => {
-        const authors = (pub.authors || []).slice(0, 4).join(', ');
-        const authorStr = pub.authors?.length > 4 ? `${authors} et al.` : authors || 'N/A';
-
-        // ✅ FIX: Smart truncation for abstract
-        const abstract = pub.abstract
-          ? smartTruncate(
-              pub.abstract.replace(/\n/g, ' ').trim(),
-              CONFIG.MAX_ABSTRACT_LENGTH
-            )
-          : 'No abstract available';
-
+      docs.forEach((chunk, i) => {
+        const excerpt = smartTruncate(chunk.text.replace(/\n/g, ' ').trim(), 600);
         sections.push('');
-        sections.push(`── SOURCE ${i + 1} ──────────────────────`);
-        sections.push(`Title:    ${pub.title}`);
-        sections.push(`Authors:  ${authorStr}`);
-        sections.push(`Year:     ${pub.year || 'N/A'}`);
-        sections.push(`Database: ${pub.source}`);
-        sections.push(`URL:      ${pub.url}`);
-        sections.push(`Abstract: ${abstract}`);
+        sections.push(`── DOCUMENT CHUNK ${i + 1} ──────────────`);
+        sections.push(`File:       ${chunk.filename}`);
+        sections.push(`Relevance:  ${chunk.score}`);
+        sections.push(`Excerpt:    ${excerpt}`);
       });
-    } else {
-      sections.push('\n[DATABASE STATUS: NO PUBLICATIONS FOUND]');
-      sections.push('Reason: No peer-reviewed papers matching the specific query and disease context were identified in PubMed or OpenAlex.');
     }
 
-    // ── Clinical Trials Data ──
-    const trials = (clinicalTrials || []).slice(0, CONFIG.MAX_TRIALS_FOR_LLM);
-    if (trials.length > 0) {
-      sections.push('');
-      sections.push('╔══════════════════════════════════════╗');
-      sections.push(`║   CLINICAL TRIALS (${trials.length} matched)          ║`);
-      sections.push('╚══════════════════════════════════════╝');
-
-      trials.forEach((trial, i) => {
-        const locationStr = (trial.locations || [])
-          .filter(l => l && l !== 'Not specified')
-          .slice(0, 2)
-          .join('; ') || 'Not specified';
-
-        const contactStr = trial.contact && trial.contact !== 'Not available'
-          ? trial.contact.replace(/\|/g, ',')
-          : 'Not available';
-
-
-        // ✅ 4 key eligibility points sent to LLM
-        const eligibilityStr = trial.eligibility
-          ? smartTruncate(
-              trial.eligibility.replace(/\*/g, '•').replace(/\n/g, ' '),
-              400
-
-            )
-          : 'Not specified';
-
+    if (responseMode !== 'document') {
+      // ── Publications Data ──
+      const pubs = (publications || []).slice(0, CONFIG.MAX_PUBS_FOR_LLM);
+      if (pubs.length > 0) {
         sections.push('');
-        sections.push(`── TRIAL ${i + 1} ──────────────────────`);
-        sections.push(`Title:       ${trial.briefTitle || trial.title}`);
-        sections.push(`Status:      ${trial.status}`);
-        sections.push(`Phase:       ${trial.phase || 'N/A'}`);
-        sections.push(`Location:    ${locationStr}`);
-        sections.push(`Contact:     ${contactStr}`);
-        sections.push(`Eligibility: ${eligibilityStr}`);
-        sections.push(`URL:         ${trial.url}`);
-      });
-    } else {
-      sections.push('\n[DATABASE STATUS: NO CLINICAL TRIALS FOUND]');
-      sections.push('Reason: Our search of ClinicalTrials.gov did not identify any trials matching these specific criteria. Please state this clearly in your report.');
+        sections.push('╔══════════════════════════════════════╗');
+        sections.push(`║   PUBLICATIONS (${pubs.length} sources)              ║`);
+        sections.push('╚══════════════════════════════════════╝');
+
+        pubs.forEach((pub, i) => {
+          const authors = (pub.authors || []).slice(0, 4).join(', ');
+          const authorStr = pub.authors?.length > 4 ? `${authors} et al.` : authors || 'N/A';
+
+          // ✅ FIX: Smart truncation for abstract
+          const abstract = pub.abstract
+            ? smartTruncate(
+                pub.abstract.replace(/\n/g, ' ').trim(),
+                CONFIG.MAX_ABSTRACT_LENGTH
+              )
+            : 'No abstract available';
+
+          sections.push('');
+          sections.push(`── SOURCE ${i + 1} ──────────────────────`);
+          sections.push(`Title:    ${pub.title}`);
+          sections.push(`Authors:  ${authorStr}`);
+          sections.push(`Year:     ${pub.year || 'N/A'}`);
+          sections.push(`Database: ${pub.source}`);
+          sections.push(`URL:      ${pub.url}`);
+          sections.push(`Abstract: ${abstract}`);
+        });
+      } else {
+        sections.push('\n[DATABASE STATUS: NO PUBLICATIONS FOUND]');
+        sections.push('Reason: No peer-reviewed papers matching the specific query and disease context were identified in PubMed or OpenAlex.');
+      }
+
+      // ── Clinical Trials Data ──
+      const trials = (clinicalTrials || []).slice(0, CONFIG.MAX_TRIALS_FOR_LLM);
+      if (trials.length > 0) {
+        sections.push('');
+        sections.push('╔══════════════════════════════════════╗');
+        sections.push(`║   CLINICAL TRIALS (${trials.length} matched)          ║`);
+        sections.push('╚══════════════════════════════════════╝');
+
+        trials.forEach((trial, i) => {
+          const locationStr = (trial.locations || [])
+            .filter(l => l && l !== 'Not specified')
+            .slice(0, 2)
+            .join('; ') || 'Not specified';
+
+          const contactStr = trial.contact && trial.contact !== 'Not available'
+            ? trial.contact.replace(/\|/g, ',')
+            : 'Not available';
+
+
+          // ✅ 4 key eligibility points sent to LLM
+          const eligibilityStr = trial.eligibility
+            ? smartTruncate(
+                trial.eligibility.replace(/\*/g, '•').replace(/\n/g, ' '),
+                400
+
+              )
+            : 'Not specified';
+
+          sections.push('');
+          sections.push(`── TRIAL ${i + 1} ──────────────────────`);
+          sections.push(`Title:       ${trial.briefTitle || trial.title}`);
+          sections.push(`Status:      ${trial.status}`);
+          sections.push(`Phase:       ${trial.phase || 'N/A'}`);
+          sections.push(`Location:    ${locationStr}`);
+          sections.push(`Contact:     ${contactStr}`);
+          sections.push(`Eligibility: ${eligibilityStr}`);
+          sections.push(`URL:         ${trial.url}`);
+        });
+      } else {
+        sections.push('\n[DATABASE STATUS: NO CLINICAL TRIALS FOUND]');
+        sections.push('Reason: Our search of ClinicalTrials.gov did not identify any trials matching these specific criteria. Please state this clearly in your report.');
+      }
     }
 
     // ── Generation Instructions ──
@@ -782,17 +966,36 @@ class LLMService {
     sections.push('║       GENERATION INSTRUCTIONS         ║');
     sections.push('╚══════════════════════════════════════╝');
     sections.push('');
-    sections.push('Generate a professional Medical Research Report following your system instructions EXACTLY.');
-    sections.push('Requirements:');
-    sections.push('1. Use the EXACT response structure from your system prompt');
-    sections.push('2. Include ALL publications as numbered findings with tables');
-    sections.push('3. Include ALL clinical trials with status, location, contact, eligibility');
-    sections.push('4. Write an executive summary that DIRECTLY answers the user query');
-    sections.push('5. Create themed groupings for research findings');
-    sections.push('6. Add analysis and key takeaways with specific references');
-    sections.push('7. End with methodology section and disclaimer');
-    sections.push('8. Use markdown tables, blockquotes, and emojis as specified');
-    sections.push('9. ONLY cite data from the sources above — NO external knowledge');
+    if (responseMode === 'executive') {
+      sections.push('Generate a concise, decision-focused CEO briefing following your system instructions EXACTLY.');
+      sections.push('Requirements:');
+      sections.push('1. Use the EXACT response structure starting with "## Executive Brief".');
+      sections.push('2. Do NOT output any tables, overview sections, or standard report sections.');
+      sections.push('3. Avoid academic language. Focus on business/clinical actionability and risks.');
+      sections.push('4. Ensure bullet points are clear, direct, and concise.');
+      sections.push('5. Output ONLY the requested sections (Key Findings, Risks, Opportunities, Recommended Actions, Confidence Assessment, Sources Used).');
+      sections.push('6. ONLY cite data from the sources above — NO external knowledge.');
+    } else if (responseMode === 'document') {
+      sections.push('Generate a precise Document Analysis and Q&A response following your system instructions EXACTLY.');
+      sections.push('Requirements:');
+      sections.push('1. Answer the user query using ONLY the provided document chunks.');
+      sections.push('2. Structure the answer logically with clear headings.');
+      sections.push('3. Mention which document(s) was referenced for the information.');
+      sections.push('4. Absolutely DO NOT include references to PubMed, OpenAlex, or ClinicalTrials.gov.');
+      sections.push('5. Include 4 relevant follow-up questions for Document Q&A.');
+    } else {
+      sections.push('Generate a professional Medical Research Report following your system instructions EXACTLY.');
+      sections.push('Requirements:');
+      sections.push('1. Use the EXACT response structure from your system prompt');
+      sections.push('2. Include ALL publications as numbered findings with tables');
+      sections.push('3. Include ALL clinical trials with status, location, contact, eligibility');
+      sections.push('4. Write an executive summary that DIRECTLY answers the user query');
+      sections.push('5. Create themed groupings for research findings');
+      sections.push('6. Add analysis and key takeaways with specific references');
+      sections.push('7. End with methodology section and disclaimer');
+      sections.push('8. Use markdown tables, blockquotes, and emojis as specified');
+      sections.push('9. ONLY cite data from the sources above — NO external knowledge');
+    }
 
     return sections.join('\n');
   }

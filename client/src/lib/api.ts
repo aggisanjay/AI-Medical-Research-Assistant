@@ -5,6 +5,15 @@
 const API_BASE =
   ((import.meta as any).env?.VITE_API_URL as string | undefined) ?? "/api";
 
+type TokenGetter = () => Promise<string | null>;
+
+let authTokenGetter: TokenGetter | null = null;
+
+/** Register Clerk session token provider (call once from authenticated app shell). */
+export function setAuthTokenGetter(getter: TokenGetter) {
+  authTokenGetter = getter;
+}
+
 export interface Publication {
   title: string;
   abstract?: string;
@@ -28,9 +37,46 @@ export interface ClinicalTrial {
   url?: string;
 }
 
+export interface WorkflowStep {
+  agent: string;
+  status: "pending" | "running" | "completed" | "failed";
+  durationMs: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DocumentChunkRef {
+  filename: string;
+  score: number;
+  excerpt?: string;
+}
+
+export interface DocumentSummary {
+  documentId: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+  status: "processing" | "ready" | "failed";
+  chunkCount: number;
+  charCount: number;
+  embeddingModel?: string;
+  embeddingDimensions?: number;
+  createdAt: string;
+}
+
+export interface ResearchResponse {
+  response: string;
+  suggestedQuestions?: string[];
+  workflowSteps?: WorkflowStep[];
+  publications?: Publication[];
+  clinicalTrials?: ClinicalTrial[];
+  documentChunks?: DocumentChunkRef[];
+  metadata?: Record<string, unknown>;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
+  responseMode?: "standard" | "executive" | "document";
   structuredInput?: {
     patientName?: string;
     disease?: string;
@@ -40,6 +86,8 @@ export interface ChatMessage {
   publications?: Publication[];
   clinicalTrials?: ClinicalTrial[];
   suggestedQuestions?: string[];
+  workflowSteps?: WorkflowStep[];
+  documentChunks?: DocumentChunkRef[];
   timestamp?: string;
 }
 
@@ -60,26 +108,25 @@ export interface SendMessagePayload {
   query?: string;
   location?: string;
   isStructured?: boolean;
+  documentIds?: string[];
+  responseMode?: "standard" | "executive" | "document";
+}
+
+async function authHeaders(extra?: Record<string, string>): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { ...extra };
+  if (authTokenGetter) {
+    const token = await authTokenGetter();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json"
-  };
-
-  const profileStr = localStorage.getItem("curalink_user_profile");
-  if (profileStr) {
-    try {
-      const p = JSON.parse(profileStr);
-      if (p && p.email) {
-        headers["X-User-Id"] = p.email;
-      }
-    } catch (e) {}
-  }
+  const headers = await authHeaders({ "Content-Type": "application/json" });
 
   const res = await fetch(`${API_BASE}${path}`, {
-    headers,
     ...init,
+    headers: { ...headers, ...(init?.headers as Record<string, string>) },
   });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
@@ -90,7 +137,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   sendMessage: (payload: SendMessagePayload) =>
-    http<{ success: boolean; conversationId: string; data: ChatMessage & { metadata?: unknown } }>(
+    http<{ success: boolean; conversationId: string; data: ResearchResponse }>(
       "/chat/message",
       { method: "POST", body: JSON.stringify(payload) },
     ),
@@ -100,10 +147,48 @@ export const api = {
     ),
   listConversations: () =>
     http<{ success: boolean; data: ConversationSummary[] }>("/chat/conversations"),
+  getAnalytics: () =>
+    http<{
+      success: boolean;
+      data: {
+        metrics: {
+          sourcesRetrieved: number;
+          citationsGenerated: number;
+          researchSessions: number;
+          documentsUploaded: number;
+          averageConfidenceScore: number;
+        };
+        distribution: { name: string; value: number }[];
+        executionTimes: { name: string; duration: number }[];
+        timeline: { year: number; count: number }[];
+      };
+    }>("/chat/analytics"),
   newConversation: () =>
     http<{ success: boolean; conversationId: string }>("/chat/conversation/new", {
       method: "POST",
     }),
   deleteConversation: (id: string) =>
     http<{ success: boolean }>(`/chat/conversation/${id}`, { method: "DELETE" }),
+
+  listDocuments: () =>
+    http<{ success: boolean; data: DocumentSummary[] }>("/documents"),
+
+  uploadDocument: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const headers = await authHeaders();
+    const res = await fetch(`${API_BASE}/documents/upload`, {
+      method: "POST",
+      headers,
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(body.error || "Upload failed");
+    }
+    return res.json() as Promise<{ success: boolean; data: DocumentSummary }>;
+  },
+
+  deleteDocument: (documentId: string) =>
+    http<{ success: boolean }>(`/documents/${documentId}`, { method: "DELETE" }),
 };

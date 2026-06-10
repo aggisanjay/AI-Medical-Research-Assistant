@@ -1,9 +1,11 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Activity, User, Sparkles, AlertCircle } from "lucide-react";
+import { Activity, User, Sparkles, FileText } from "lucide-react";
 import type { ChatMessage } from "@/lib/api";
 import { PublicationCard } from "./PublicationCard";
 import { ClinicalTrialCard } from "./ClinicalTrialCard";
+import { AgentWorkflowPanel } from "./AgentWorkflowPanel";
+import { ExecutiveSummaryCard } from "./ExecutiveSummaryCard";
 
 interface Props {
   message: ChatMessage;
@@ -43,14 +45,56 @@ export function MessageBubble({ message, onSuggestion }: Props) {
         <Activity className="h-4.5 w-4.5" />
       </div>
       <div className="flex-1 min-w-0 space-y-5">
-        
+
+        {message.workflowSteps && message.workflowSteps.length > 0 && (
+          <AgentWorkflowPanel
+            steps={message.workflowSteps}
+            collapsible
+            defaultExpanded={false}
+          />
+        )}
+
         {/* Main AI Answer Bubble */}
-        <div className="rounded-2xl rounded-tl-sm border border-white/5 bg-slate-900/60 backdrop-blur-md px-6 py-5 shadow-2xl relative overflow-hidden">
-          <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-blue-500 to-cyan-500" />
-          <div className="prose-research max-w-none text-sm text-slate-300 leading-relaxed font-light">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+        {message.role === "assistant" && message.responseMode === "executive" ? (
+          <ExecutiveSummaryCard message={message} />
+        ) : (
+          <div className="rounded-2xl rounded-tl-sm border border-white/5 bg-slate-900/60 backdrop-blur-md px-6 py-5 shadow-2xl relative overflow-hidden">
+            <div className={`absolute left-0 top-0 w-1 h-full ${
+              message.responseMode === "document" 
+                ? "bg-gradient-to-b from-purple-500 to-indigo-500" 
+                : "bg-gradient-to-b from-blue-500 to-cyan-500"
+            }`} />
+            <div className="prose-research max-w-none text-sm text-slate-300 leading-relaxed font-light">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+            </div>
           </div>
-        </div>
+        )}
+
+        {message.documentChunks && message.documentChunks.length > 0 && (
+          <Section title="Uploaded Document Sources" count={message.documentChunks.length}>
+            <div className="space-y-2">
+              {message.documentChunks.map((chunk, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-3"
+                >
+                  <div className="flex items-center gap-2 text-[10px] font-semibold text-purple-300">
+                    <FileText className="h-3.5 w-3.5" />
+                    {chunk.filename}
+                    <span className="text-purple-400/70 font-mono ml-auto">
+                      {(chunk.score * 100).toFixed(0)}% match
+                    </span>
+                  </div>
+                  {chunk.excerpt && (
+                    <p className="mt-1.5 text-[11px] text-slate-400 font-light leading-relaxed line-clamp-2">
+                      {chunk.excerpt}…
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
 
         {/* Publications Grid */}
         {message.publications && message.publications.length > 0 && (

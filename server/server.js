@@ -5,18 +5,22 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const chatRoutes = require('./routes/chatRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const { clerkAuthMiddleware } = require('./middleware/clerkAuth');
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+app.use(clerkAuthMiddleware);
 
 // Connect to MongoDB
 connectDB();
 
 // Routes
 app.use('/api/chat', chatRoutes);
+app.use('/api/documents', documentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

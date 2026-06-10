@@ -5,7 +5,6 @@ class ContextService {
    * Get or create a conversation
    */
   async getConversation(conversationId, userId) {
-    // Find by conversationId
     let conversation = await Conversation.findOne({ conversationId });
     if (!conversation) {
       conversation = new Conversation({
@@ -14,6 +13,14 @@ class ContextService {
         messages: []
       });
       await conversation.save();
+    } else if (
+      userId &&
+      conversation.userId !== userId &&
+      conversation.userId !== 'anonymous'
+    ) {
+      const err = new Error('Conversation not found');
+      err.statusCode = 404;
+      throw err;
     } else if (userId && conversation.userId === 'anonymous') {
       conversation.userId = userId;
       await conversation.save();
@@ -88,6 +95,15 @@ class ContextService {
   /**
    * Get conversation history formatted for LLM
    */
+  async resolveDocumentIds(conversationId, documentIds, userId) {
+    const conversation = await this.getConversation(conversationId, userId);
+    if (documentIds !== undefined) {
+      conversation.attachedDocumentIds = [...new Set(documentIds)];
+      await conversation.save();
+    }
+    return conversation.attachedDocumentIds || [];
+  }
+
   async getHistoryForLLM(conversationId, maxMessages = 6, userId) {
     const conversation = await this.getConversation(conversationId, userId);
     return conversation.messages

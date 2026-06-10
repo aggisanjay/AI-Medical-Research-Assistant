@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const orchestrator = require('../services/orchestrator');
 const Conversation = require('../models/Conversation');
+const { getUserId } = require('../middleware/clerkAuth');
 
 const chatController = {
   /**
@@ -15,10 +16,12 @@ const chatController = {
         disease,
         query,
         location,
-        isStructured
+        isStructured,
+        documentIds,
+        responseMode
       } = req.body;
 
-      const userId = req.headers['x-user-id'] || 'anonymous';
+      const userId = getUserId(req);
       const convId = conversationId || uuidv4();
 
       // Build input object
@@ -27,14 +30,20 @@ const chatController = {
             patientName: patientName || '',
             disease: disease || '',
             query: query || '',
-            location: location || ''
+            location: location || '',
+            responseMode: responseMode || 'standard'
           }
         : {
             naturalQuery: message || '',
             patientName: patientName || '',
             disease: disease || '',
-            location: location || ''
+            location: location || '',
+            responseMode: responseMode || 'standard'
           };
+
+      if (documentIds?.length) {
+        input.documentIds = documentIds;
+      }
 
       // Process through the pipeline
       const result = await orchestrator.processQuery(input, convId, userId);
@@ -61,7 +70,7 @@ const chatController = {
   async getConversation(req, res) {
     try {
       const { conversationId } = req.params;
-      const userId = req.headers['x-user-id'] || 'anonymous';
+      const userId = getUserId(req);
       const conversation = await Conversation.findOne({ conversationId, userId });
 
       if (!conversation) {
@@ -79,7 +88,7 @@ const chatController = {
    */
   async listConversations(req, res) {
     try {
-      const userId = req.headers['x-user-id'] || 'anonymous';
+      const userId = getUserId(req);
       const conversations = await Conversation.find({ userId })
         .sort({ updatedAt: -1 })
         .limit(20)
@@ -114,7 +123,7 @@ const chatController = {
    */
   async newConversation(req, res) {
     try {
-      const userId = req.headers['x-user-id'] || 'anonymous';
+      const userId = getUserId(req);
       const conversationId = uuidv4();
       const conversation = new Conversation({
         conversationId,
@@ -129,12 +138,122 @@ const chatController = {
   },
 
   /**
+   * Get aggregated research database analytics
+   */
+  async getAnalytics(req, res) {
+    try {
+      const userId = getUserId(req);
+      const conversations = await Conversation.find({ userId });
+      const Document = require('../models/Document');
+      const documents = await Document.find({ userId });
+
+      let sourcesRetrieved = 0;
+      let citationsGenerated = 0;
+      let totalConfidenceSum = 0;
+      let confidenceCount = 0;
+
+      let pubmedCount = 0;
+      let openalexCount = 0;
+      let trialsCount = 0;
+
+      const researchDurations = [];
+      const evidenceDurations = [];
+      const summaryDurations = [];
+      const publicationsByYear = {};
+
+      conversations.forEach(conv => {
+        conv.messages.forEach(msg => {
+          if (msg.role === 'assistant') {
+            const pubList = msg.publications || [];
+            const trialList = msg.clinicalTrials || [];
+            citationsGenerated += pubList.length + trialList.length;
+
+            if (msg.metadata && typeof msg.metadata.totalRetrieved === 'number') {
+              sourcesRetrieved += msg.metadata.totalRetrieved;
+            } else {
+              sourcesRetrieved += pubList.length + trialList.length;
+            }
+
+            pubList.forEach(pub => {
+              if (pub.source === 'PubMed') pubmedCount++;
+              else if (pub.source === 'OpenAlex') openalexCount++;
+              
+              if (pub.year) {
+                publicationsByYear[pub.year] = (publicationsByYear[pub.year] || 0) + 1;
+              }
+            });
+            trialsCount += trialList.length;
+
+            if (msg.workflowSteps && Array.isArray(msg.workflowSteps)) {
+              msg.workflowSteps.forEach(step => {
+                const agentName = step.agent;
+                if ((agentName === 'Research Agent' || agentName === 'Document Retrieval Agent') && step.durationMs >= 0) {
+                  researchDurations.push(step.durationMs);
+                } else if (agentName === 'Evidence Agent' || agentName === 'Document Evidence Agent') {
+                  if (step.durationMs >= 0) evidenceDurations.push(step.durationMs);
+                  if (step.metadata && typeof step.metadata.avgConfidence === 'number') {
+                    totalConfidenceSum += step.metadata.avgConfidence;
+                    confidenceCount++;
+                  }
+                } else if (agentName === 'Summary Agent' && step.durationMs >= 0) {
+                  summaryDurations.push(step.durationMs);
+                }
+              });
+            }
+          }
+        });
+      });
+
+      const avgConfidence = confidenceCount > 0 ? (totalConfidenceSum / confidenceCount) : 0;
+      const getAvg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+      const timelineData = Object.entries(publicationsByYear)
+        .map(([year, count]) => ({ year: parseInt(year), count }))
+        .sort((a, b) => a.year - b.year);
+
+      const currentYear = new Date().getFullYear();
+      if (timelineData.length === 0) {
+        for (let y = currentYear - 4; y <= currentYear; y++) {
+          timelineData.push({ year: y, count: 0 });
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          metrics: {
+            sourcesRetrieved,
+            citationsGenerated,
+            researchSessions: conversations.length,
+            documentsUploaded: documents.length,
+            averageConfidenceScore: Math.round(avgConfidence * 10) / 10
+          },
+          distribution: [
+            { name: 'PubMed', value: pubmedCount },
+            { name: 'OpenAlex', value: openalexCount },
+            { name: 'ClinicalTrials', value: trialsCount }
+          ],
+          executionTimes: [
+            { name: 'Research Agent', duration: Math.round(getAvg(researchDurations)) },
+            { name: 'Evidence Agent', duration: Math.round(getAvg(evidenceDurations)) },
+            { name: 'Summary Agent', duration: Math.round(getAvg(summaryDurations)) }
+          ],
+          timeline: timelineData
+        }
+      });
+    } catch (error) {
+      console.error('Analytics controller error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+
+  /**
    * Delete conversation
    */
   async deleteConversation(req, res) {
     try {
       const { conversationId } = req.params;
-      const userId = req.headers['x-user-id'] || 'anonymous';
+      const userId = getUserId(req);
       const result = await Conversation.deleteOne({ conversationId, userId });
       
       if (result.deletedCount === 0) {

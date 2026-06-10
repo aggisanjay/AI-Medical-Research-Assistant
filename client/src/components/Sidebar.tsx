@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { 
   Plus, MessageSquare, Trash2, Activity, Loader2,
-  Home, Settings, ChevronLeft, ChevronRight, LogOut
+  Home, Settings, ChevronLeft, ChevronRight, LogOut, FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@clerk/react";
@@ -39,6 +39,7 @@ export function Sidebar({
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "chat", label: "Research Workspace", icon: MessageSquare },
+    { id: "documents", label: "Documents", icon: FileText },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
