@@ -344,6 +344,9 @@ npm run build
 ```
 Ensure client env variable `VITE_CLERK_PUBLISHABLE_KEY` is set in your hosting provider configuration, and adjust API routing variables if the backend uses a separate URL.
 
+> [!NOTE]
+> For Vercel deployments, a [vercel.json](file:///c:/Users/aggis/Downloads/AI-Medical-Research-Assistant/client/vercel.json) file is provided in the `client` directory to handle client-side routing. This rewrites all non-API paths to `index.html` to prevent `404 Not Found` errors when refreshing the page.
+
 ### Backend Application
 Deploy the Node/Express backend to containers (such as Render, Railway, fly.io, or Heroku):
 - Set all backend variables (`CLERK_SECRET_KEY`, `MONGODB_URI`, `HF_API_TOKEN`) in the provider dashboard.
