@@ -2,7 +2,7 @@
 
 > Multi-Agent Research Intelligence for Evidence-Based Clinical Decision Support
 
-Curalink is an enterprise-grade AI Research Copilot designed to accelerate clinical trials evaluation and scientific literature aggregation. Built with a modular multi-agent architecture, Curalink conducts parallel federated queries across **PubMed**, **OpenAlex**, and **ClinicalTrials.gov**, applies a custom multi-parametric scoring algorithm to rank findings, and executes Retrieval-Augmented Generation (RAG) over uploaded patient records to deliver structured academic synthesis or strategic executive briefings.
+Curalink is an enterprise-grade AI Research Copilot designed to accelerate clinical trials evaluation and scientific literature aggregation. Built with a modular multi-agent architecture, Curalink conducts parallel federated queries across **PubMed**, **OpenAlex**, and **ClinicalTrials.gov**, applies a custom multi-parametric scoring algorithm to rank findings, and executes Retrieval-Augmented Generation (RAG) over uploaded documents to deliver structured academic synthesis or strategic executive briefings.
 
 The application enforces zero-trust multi-tenancy via **Clerk JWT scope verification**, isolating all user conversations, local RAG vector partitions, and diagnostic telemetry.
 
@@ -24,7 +24,7 @@ Curalink solves the clinical discovery bottleneck by orchestrating specialized A
 
 * **Orchestrated Multi-Agent Workflows**: A three-tier sequential agent sequence (Research → Evidence → Summary) handles query expansion, federated query execution, quality filtration, and final clinical synthesis.
 * **Parametric Evidence Ranking**: A custom 100-point scoring algorithm ranks candidates based on study recency, journal authority metrics, and query semantic congruence.
-* **Document Intelligence**: RAG context is injected from uploaded PDF/TXT files (e.g., patient genotypic records, hospital protocols), grounding the synthesis with precise, user-supplied medical data.
+* **Document Intelligence**: A domain-agnostic RAG pipeline that digests uploaded PDF/TXT files, enabling grounded natural language query responses over any text-heavy source (e.g., medical literature, patient records, or business reports).
 * **Executive Mode Synthesizer**: Converts verbose academic prose into executive briefings detailing strategic findings, risk matrices, and recommended actions tailored for medical directors and startup managers.
 
 ---
@@ -36,7 +36,7 @@ Curalink solves the clinical discovery bottleneck by orchestrating specialized A
 * **Parallel Federated Retrieval**: Queries are executed concurrently across OpenAlex, PubMed, and ClinicalTrials.gov.
 * **Medical Query Expansion**: Normalizes input parameters and injects clinical synonyms to expand retrieval recall.
 * **Custom Evidence Scoring (100-Point Engine)**: Computes relevance based on publication timeline decay, title congruence, and journal sources.
-* **Local RAG Pipeline**: Secure text extraction (`pdf-parse`) and overlap-safe paragraph chunking for patient dossiers.
+* **Local RAG Pipeline**: Secure text extraction (`pdf-parse`) and overlap-safe paragraph chunking for uploaded documents.
 * **Multi-Provider Embedding Options**: Support for OpenAI (`text-embedding-3-small`), HuggingFace inference, or a local deterministic fallback.
 * **Executive Mode**: A stateful UI/LLM toggle to compile academic reports or executive action briefings.
 * **Visual Agent Telemetry**: Step-by-step diagnostic logging charting processing latencies, citation densities, and agent statuses.
@@ -128,7 +128,48 @@ sequenceDiagram
 
 ---
 
-## RAG Pipeline
+## Document Intelligence & RAG
+
+Curalink includes a domain-agnostic Document Intelligence pipeline that allows users to upload PDF and TXT documents and interact with them through natural language.
+
+### Supported Workflows
+
+* Upload research papers and ask questions about findings.
+* Upload patient reports and extract relevant medical information.
+* Upload business documents and generate executive summaries.
+* Upload technical documentation and retrieve specific information.
+* Analyze contracts, policies, reports, or any text-heavy documents.
+
+### How It Works
+
+1. User uploads a PDF or TXT document.
+2. The document is parsed and converted into raw text.
+3. The text is split into overlapping chunks.
+4. Embeddings are generated for each chunk.
+5. Chunks are stored and indexed.
+6. When the user asks a question, the system retrieves the most relevant chunks using semantic similarity.
+7. Retrieved context is injected into the LLM prompt.
+8. The response is generated using grounded document context.
+
+### Example
+
+Document:
+
+"Q3 Revenue increased by 18% compared to Q2."
+
+Question:
+
+"What was the revenue growth in Q3?"
+
+Response:
+
+"Revenue increased by 18% compared to Q2."
+
+### Key Design Principle
+
+The Document Intelligence system is not limited to medical documents. It can analyze and answer questions about any uploaded PDF or TXT document. Medical research capabilities are provided separately through integrations with PubMed, OpenAlex, and ClinicalTrials.gov, while the document analysis pipeline remains fully domain-independent.
+
+### RAG Technical Pipeline
 
 Curalink's Retrieval-Augmented Generation pipeline indexes TXT and PDF documents, creating secure vector partitions that are searchable by cosine similarity matching.
 
