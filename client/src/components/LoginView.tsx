@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Activity, Shield, CheckCircle, Sparkles } from "lucide-react";
-import { Show, SignInButton, SignUpButton } from "@clerk/react";
+import { Activity, Shield, CheckCircle } from "lucide-react";
+import { SignIn } from "@clerk/react";
 
 export function LoginView() {
   const [particles, setParticles] = useState<Array<{ id: number; style: React.CSSProperties }>>([]);
@@ -100,35 +100,28 @@ export function LoginView() {
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 lg:p-12 bg-gradient-to-b from-[#090d16] to-[#020617] relative">
         <div className="absolute w-[350px] h-[350px] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
 
-        <div className="w-full max-w-md glass-card p-8 lg:p-10 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5 relative z-10 transition-all duration-500 hover:border-white/10 text-center">
-          
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold tracking-tight text-white font-display">
-              Clinical Workspace
-            </h2>
-            <p className="text-xs text-slate-400 mt-1.5 font-light">
-              Access the HIPAA-compliant clinical research sandbox
-            </p>
-          </div>
-
-          {/* Clerk Integration */}
-          <div className="flex flex-col gap-4 mt-6">
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(37,99,235,0.3)] hover:shadow-[0_4px_25px_rgba(37,99,235,0.45)] transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] cursor-pointer">
-                  <span>Sign In to Workspace</span>
-                  <Sparkles className="h-4 w-4 text-cyan-200" />
-                </button>
-              </SignInButton>
-              
-              <SignUpButton mode="modal">
-                <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-slate-700/60 hover:bg-slate-900/50 text-sm font-semibold text-slate-300 hover:text-white transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] cursor-pointer">
-                  <span>Register Clinical Account</span>
-                </button>
-              </SignUpButton>
-            </Show>
-          </div>
-
+        <div className="relative z-10 w-full max-w-md">
+          <SignIn
+            routing="hash"
+            appearance={{
+              elements: {
+                rootBox: "w-full mx-auto",
+                card: "bg-slate-950/60 backdrop-blur-xl border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.6)] rounded-3xl p-2",
+                headerTitle: "text-white font-display font-extrabold text-xl tracking-tight",
+                headerSubtitle: "text-slate-400 text-xs font-light mt-1",
+                socialButtonsBlockButton: "bg-slate-900 border border-white/5 hover:border-slate-700 text-white hover:bg-slate-800 transition-all duration-300 rounded-xl",
+                formButtonPrimary: "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-[0_4px_20px_rgba(37,99,235,0.3)] font-semibold transition-all duration-300 rounded-xl py-2.5",
+                formFieldLabel: "text-xs font-semibold text-slate-350 uppercase tracking-wider",
+                formFieldInput: "bg-slate-900/60 border border-white/5 text-white focus:border-blue-500/50 transition-colors rounded-xl py-2.5",
+                footerActionText: "text-slate-400 text-xs font-light",
+                footerActionLink: "text-cyan-400 hover:text-cyan-300 transition-colors font-semibold",
+                dividerLine: "bg-white/5",
+                dividerText: "text-slate-500 text-[10px] font-mono",
+                identityPreviewText: "text-slate-300",
+                identityPreviewEditButtonIcon: "text-cyan-400 hover:text-cyan-300",
+              }
+            }}
+          />
         </div>
 
         {/* HIPAA Security Footer */}

@@ -8,7 +8,6 @@ import { Sidebar } from "@/components/Sidebar";
 import { StructuredInput } from "@/components/StructuredInput";
 import { MessageBubble } from "@/components/MessageBubble";
 import { AgentWorkflowPanel } from "@/components/AgentWorkflowPanel";
-import { LandingPageView } from "@/components/LandingPageView";
 import {
   api,
   setAuthTokenGetter,
@@ -253,7 +252,41 @@ export function CuralinkApp() {
 
         <div ref={scrollerRef} className="flex-1 overflow-y-auto min-h-0">
           {messages.length === 0 ? (
-            <LandingPageView onSuggest={(q) => handleSubmit({ message: q })} />
+            <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto px-6 text-center space-y-6 animate-fade-in">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-xl pulse-cyan-glow">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+                  Start a New Investigation
+                </h1>
+                <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Enter your clinical query below. Curalink's multi-agent system will federate searches across PubMed, OpenAlex, and ClinicalTrials.gov to generate structured evidence briefs.
+                </p>
+              </div>
+              <div className="w-full pt-4">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-3">
+                  Quick-Start Queries
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2 text-left">
+                  {[
+                    "Latest immunotherapy approaches for stage IV melanoma",
+                    "Emerging cancer immunotherapy approaches",
+                    "Latest treatments for Alzheimer's",
+                    "Long COVID clinical findings"
+                  ].map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => handleSubmit({ message: q })}
+                      className="group flex items-center gap-2 rounded-xl border border-white/5 bg-slate-900/35 hover:bg-slate-900 hover:border-blue-500/30 p-3 text-xs hover:shadow-lg transition-all duration-300 text-slate-350 cursor-pointer"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                      <span className="text-slate-300 group-hover:text-white transition-colors truncate">{q}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
               {messages.map((m, i) => (
