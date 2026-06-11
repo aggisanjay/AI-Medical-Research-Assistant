@@ -19,7 +19,6 @@ import {
 import { cn } from "@/lib/utils";
 
 // Import view components
-import { LoginView } from "@/components/LoginView";
 import { DashboardView } from "@/components/DashboardView";
 import { SettingsView } from "@/components/SettingsView";
 import { DocumentsView } from "@/components/DocumentsView";
@@ -345,7 +344,7 @@ export function CuralinkApp() {
   }
 
   if (!isSignedIn) {
-    return <LoginView />;
+    return null;
   }
 
   return (

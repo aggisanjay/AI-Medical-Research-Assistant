@@ -13,7 +13,7 @@ function DashboardRoute() {
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      navigate({ to: "/sign-in" });
+      navigate({ to: "/" });
     }
   }, [isLoaded, isSignedIn, navigate]);
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { useUser } from "@clerk/react";
+import { useUser, useClerk } from "@clerk/react";
 import { 
   Activity, ShieldCheck, Zap, Database, Cpu, 
   FileSearch, Sparkles, LayoutGrid, CheckCircle2, 
@@ -11,6 +11,7 @@ import {
 
 export function LandingPage() {
   const { isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
   const [activeAgentTab, setActiveAgentTab] = useState(0);
   const [executiveMode, setExecutiveMode] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
@@ -157,19 +158,38 @@ export function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link
-              to={isSignedIn ? "/dashboard" : "/sign-in"}
-              className="text-xs font-semibold text-slate-350 hover:text-white transition-colors"
-            >
-              {isSignedIn ? "Workspace" : "Sign In"}
-            </Link>
-            <Link
-              to={isSignedIn ? "/dashboard" : "/sign-in"}
-              className="relative inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-xs font-semibold text-white shadow-[0_4px_15px_rgba(37,99,235,0.25)] hover:shadow-[0_4px_20px_rgba(37,99,235,0.4)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            {isSignedIn ? (
+              <Link
+                to="/dashboard"
+                className="text-xs font-semibold text-slate-350 hover:text-white transition-colors"
+              >
+                Workspace
+              </Link>
+            ) : (
+              <button
+                onClick={() => openSignIn({ forceRedirectUrl: "/dashboard" })}
+                className="text-xs font-semibold text-slate-350 hover:text-white transition-colors cursor-pointer"
+              >
+                Sign In
+              </button>
+            )}
+            {isSignedIn ? (
+              <Link
+                to="/dashboard"
+                className="relative inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-xs font-semibold text-white shadow-[0_4px_15px_rgba(37,99,235,0.25)] hover:shadow-[0_4px_20px_rgba(37,99,235,0.4)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span>Get Started</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            ) : (
+              <button
+                onClick={() => openSignIn({ forceRedirectUrl: "/dashboard" })}
+                className="relative inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-xs font-semibold text-white shadow-[0_4px_15px_rgba(37,99,235,0.25)] hover:shadow-[0_4px_20px_rgba(37,99,235,0.4)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              >
+                <span>Get Started</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -190,13 +210,23 @@ export function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-          <Link
-            to={isSignedIn ? "/dashboard" : "/sign-in"}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-sm font-semibold text-white shadow-[0_4px_25px_rgba(37,99,235,0.3)] hover:shadow-[0_4px_30px_rgba(37,99,235,0.45)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <span>Get Started Now</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {isSignedIn ? (
+            <Link
+              to="/dashboard"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-sm font-semibold text-white shadow-[0_4px_25px_rgba(37,99,235,0.3)] hover:shadow-[0_4px_30px_rgba(37,99,235,0.45)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <span>Get Started Now</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <button
+              onClick={() => openSignIn({ forceRedirectUrl: "/dashboard" })}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-sm font-semibold text-white shadow-[0_4px_25px_rgba(37,99,235,0.3)] hover:shadow-[0_4px_30px_rgba(37,99,235,0.45)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            >
+              <span>Get Started Now</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
           <a
             href="#product-demo"
             onClick={handleScrollToDemo}
@@ -781,13 +811,23 @@ export function LandingPage() {
             Access Curalink's HIPAA-secure sandbox and run multi-agent query compilations across PubMed, OpenAlex, and ClinicalTrials.gov instantly.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link
-              to={isSignedIn ? "/dashboard" : "/sign-in"}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-sm font-semibold text-white shadow-[0_8px_30px_rgba(37,99,235,0.35)] hover:shadow-[0_8px_40px_rgba(37,99,235,0.55)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <span>Get Started Now</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            {isSignedIn ? (
+              <Link
+                to="/dashboard"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-sm font-semibold text-white shadow-[0_8px_30px_rgba(37,99,235,0.35)] hover:shadow-[0_8px_40px_rgba(37,99,235,0.55)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span>Get Started Now</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <button
+                onClick={() => openSignIn({ forceRedirectUrl: "/dashboard" })}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-sm font-semibold text-white shadow-[0_8px_30px_rgba(37,99,235,0.35)] hover:shadow-[0_8px_40px_rgba(37,99,235,0.55)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              >
+                <span>Get Started Now</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </section>
