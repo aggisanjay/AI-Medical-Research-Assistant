@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { 
-  BookOpen, Cpu, FileText, CheckCircle, Search, Sparkles, Plus, 
-  ChevronRight, ArrowRight, ArrowUpRight, Gauge, Database, History,
+  BookOpen, FileText, Search, Sparkles, Plus, 
+  ChevronRight, ArrowUpRight, Gauge, Database, History,
   Hourglass, TrendingUp
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import {
   ResponsiveContainer,
   PieChart,
@@ -74,11 +75,11 @@ export function DashboardView({
     { year: 2026, count: 0 }
   ];
 
-  // Colors mapping for charts
+  // Colors mapping for charts (monochrome & minimal blue accent)
   const COLORS = {
-    PubMed: "#a855f7",
-    OpenAlex: "#ec4899",
-    ClinicalTrials: "#10b981"
+    PubMed: "#ffffff",
+    OpenAlex: "#2563EB",
+    ClinicalTrials: "#71717a"
   };
 
   const statCards = [
@@ -87,35 +88,30 @@ export function DashboardView({
       value: metrics.sourcesRetrieved.toLocaleString(),
       desc: "Gross database responses",
       icon: Database,
-      iconColor: "text-blue-400 bg-blue-500/10 border-blue-500/20"
     },
     {
       title: "Citations Generated",
       value: metrics.citationsGenerated.toLocaleString(),
       desc: "Peer-reviewed citations mapped",
       icon: BookOpen,
-      iconColor: "text-purple-400 bg-purple-500/10 border-purple-500/20"
     },
     {
       title: "Research Sessions",
       value: metrics.researchSessions.toString(),
       desc: "Investigations logged",
       icon: History,
-      iconColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
     },
     {
       title: "Documents Uploaded",
       value: metrics.documentsUploaded.toString(),
       desc: "Ingested semantic TXT/PDFs",
       icon: FileText,
-      iconColor: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
     },
     {
       title: "Avg Confidence Score",
       value: `${metrics.averageConfidenceScore}/10`,
       desc: "Evidence Agent score index",
       icon: Gauge,
-      iconColor: "text-amber-400 bg-amber-500/10 border-amber-500/20"
     }
   ];
 
@@ -128,7 +124,6 @@ export function DashboardView({
         onSelectConversation("");
         onNavigate("chat");
       },
-      gradient: "from-blue-600/25 to-blue-500/5 hover:border-blue-500/40"
     },
     {
       title: "Query Literature",
@@ -137,46 +132,44 @@ export function DashboardView({
       action: () => {
         onNavigate("chat");
       },
-      gradient: "from-cyan-600/25 to-cyan-500/5 hover:border-cyan-500/40"
     }
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
+    <div className="space-y-8 pb-16">
       
       {/* Greeting Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/8 pb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white font-display">
-            Evidence Analytics Dashboard
+          <h1 className="text-3xl font-serif font-bold tracking-tight text-white">
+            Evidence Analytics
           </h1>
-          <p className="text-sm text-slate-400 font-light mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 font-normal mt-1">
             Real-time tracking of multi-agent execution times, source distributions, and database metrics.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button 
+          <Button 
             onClick={() => {
               onSelectConversation("");
               onNavigate("chat");
             }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:shadow-[0_4px_16px_rgba(37,99,235,0.35)] transition-all hover:scale-[1.01]"
+            size="default"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             New Investigation
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Universal Search Box */}
-      <div className="glass-card p-4 rounded-2xl border border-white/5 relative overflow-hidden group">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        <div className="relative z-10 flex items-center gap-3 bg-slate-950/80 border border-slate-800/60 rounded-xl px-4 py-3 focus-within:border-blue-500/40 transition-all">
+      <div className="editorial-card p-2 border border-white/8">
+        <div className="flex items-center gap-3 bg-black/60 border border-white/8 rounded-2xl px-4 py-3 focus-within:border-white/20 transition-all">
           <Search className="h-4 w-4 text-slate-500 shrink-0" />
           <input 
             type="text" 
             placeholder="Search publications, clinical trials, or ask a research question (e.g. Stage IV Melanoma CAR-T)..."
-            className="flex-1 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none min-w-0 font-light"
+            className="flex-1 bg-transparent text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none min-w-0 font-normal"
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.currentTarget.value.trim()) {
                 onSearchSuggest(e.currentTarget.value);
@@ -184,7 +177,7 @@ export function DashboardView({
               }
             }}
           />
-          <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-500 uppercase">
+          <kbd className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-[#18181b] border border-white/10 text-[10px] font-mono text-slate-400 uppercase">
             Enter
           </kbd>
         </div>
@@ -195,19 +188,19 @@ export function DashboardView({
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
-            <div key={i} className="glass-card p-5 rounded-2xl border border-white/5 relative overflow-hidden transition-all duration-300 hover:translate-y-[-2px] hover:border-white/10 flex flex-col justify-between">
+            <div key={i} className="editorial-card p-5 border border-white/8 flex flex-col justify-between hover:border-white/20 transition-all duration-200">
               <div className="flex justify-between items-start">
-                <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase font-display">{card.title}</span>
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${card.iconColor}`}>
-                  <Icon className="h-4.5 w-4.5" />
+                <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">{card.title}</span>
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white">
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
               </div>
 
               <div className="mt-4">
-                <span className="text-2xl font-bold tracking-tight text-white font-display block">
+                <span className="text-2xl sm:text-3xl font-serif font-bold text-white block">
                   {loadingAnalytics ? "..." : card.value}
                 </span>
-                <span className="text-[10px] text-slate-500 font-light mt-1 block">
+                <span className="text-[10px] text-slate-500 font-normal mt-1 block">
                   {card.desc}
                 </span>
               </div>
@@ -220,9 +213,9 @@ export function DashboardView({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Chart A: Source Distribution */}
-        <div className="glass-card p-5 rounded-2xl border border-white/5 flex flex-col h-[320px]">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-display mb-4 flex items-center gap-1.5">
-            <Database className="h-4 w-4 text-purple-400" />
+        <div className="editorial-card p-5 border border-white/8 flex flex-col h-[320px]">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5">
+            <Database className="h-3.5 w-3.5 text-white" />
             Source Distribution
           </h3>
           <div className="flex-1 min-h-0 relative">
@@ -231,7 +224,7 @@ export function DashboardView({
             ) : distributionData.reduce((sum: number, d: any) => sum + d.value, 0) === 0 ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs gap-1">
                 <span>No source data retrieved yet</span>
-                <span className="text-[10px] text-slate-600">Queries in Chat mode will populate this card</span>
+                <span className="text-[10px] text-slate-600">Queries in Workspace mode will populate this card</span>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -240,23 +233,23 @@ export function DashboardView({
                     data={distributionData}
                     cx="50%"
                     cy="45%"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={55}
+                    outerRadius={75}
                     paddingAngle={4}
                     dataKey="value"
                   >
                     {distributionData.map((entry: any, index: number) => {
-                      const color = COLORS[entry.name as keyof typeof COLORS] || "#64748b";
+                      const color = COLORS[entry.name as keyof typeof COLORS] || "#52525b";
                       return <Cell key={`cell-${index}`} fill={color} />;
                     })}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "11px" }}
+                    contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px", color: "#fff" }}
                   />
                   <Legend 
                     verticalAlign="bottom" 
                     iconSize={8}
-                    formatter={(value) => <span className="text-[10px] text-slate-300 font-light">{value}</span>}
+                    formatter={(value) => <span className="text-[10px] text-slate-300 font-normal">{value}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -265,9 +258,9 @@ export function DashboardView({
         </div>
 
         {/* Chart B: Agent Execution Time */}
-        <div className="glass-card p-5 rounded-2xl border border-white/5 flex flex-col h-[320px]">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-display mb-4 flex items-center gap-1.5">
-            <Hourglass className="h-4 w-4 text-cyan-400" />
+        <div className="editorial-card p-5 border border-white/8 flex flex-col h-[320px]">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5">
+            <Hourglass className="h-3.5 w-3.5 text-white" />
             Agent Execution Runtimes (ms)
           </h3>
           <div className="flex-1 min-h-0 relative">
@@ -276,16 +269,16 @@ export function DashboardView({
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={executionTimesData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={9} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis dataKey="name" stroke="#71717a" fontSize={9} tickLine={false} />
+                  <YAxis stroke="#71717a" fontSize={9} tickLine={false} />
                   <Tooltip 
-                    cursor={{ fill: "rgba(255,255,255,0.02)" }}
-                    contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "11px" }}
+                    cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                    contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px", color: "#fff" }}
                   />
-                  <Bar dataKey="duration" fill="#2563EB" radius={[4, 4, 0, 0]} maxBarSize={45} minPointSize={5}>
-                    {executionTimesData.map((entry: any, index: number) => {
-                      const colors = ["#3b82f6", "#06b6d4", "#10b981"];
+                  <Bar dataKey="duration" fill="#2563EB" radius={[6, 6, 0, 0]} maxBarSize={45} minPointSize={5}>
+                    {executionTimesData.map((_entry: any, index: number) => {
+                      const colors = ["#2563EB", "#ffffff", "#71717a"];
                       return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
                     })}
                   </Bar>
@@ -296,9 +289,9 @@ export function DashboardView({
         </div>
 
         {/* Chart C: Publication Timeline */}
-        <div className="glass-card p-5 rounded-2xl border border-white/5 flex flex-col h-[320px]">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-display mb-4 flex items-center gap-1.5">
-            <TrendingUp className="h-4 w-4 text-blue-400" />
+        <div className="editorial-card p-5 border border-white/8 flex flex-col h-[320px]">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5 text-white" />
             Publications by Year
           </h3>
           <div className="flex-1 min-h-0 relative">
@@ -307,19 +300,19 @@ export function DashboardView({
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={timelineData} margin={{ top: 10, right: 15, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis dataKey="year" stroke="#64748b" fontSize={9} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={9} tickLine={false} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis dataKey="year" stroke="#71717a" fontSize={9} tickLine={false} />
+                  <YAxis stroke="#71717a" fontSize={9} tickLine={false} allowDecimals={false} />
                   <Tooltip 
-                    contentStyle={{ background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", fontSize: "11px" }}
+                    contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px", color: "#fff" }}
                   />
                   <Line 
                     type="monotone" 
                     dataKey="count" 
-                    stroke="#3b82f6" 
+                    stroke="#2563EB" 
                     strokeWidth={2}
-                    dot={{ r: 4, stroke: "#3b82f6", strokeWidth: 1.5, fill: "#020617" }}
-                    activeDot={{ r: 6 }} 
+                    dot={{ r: 3, stroke: "#2563EB", strokeWidth: 1.5, fill: "#000000" }}
+                    activeDot={{ r: 5 }} 
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -333,10 +326,13 @@ export function DashboardView({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Recent Activity Table */}
-        <div className="lg:col-span-2 glass-card p-5 rounded-2xl border border-white/5">
+        <div className="lg:col-span-2 editorial-card p-6 border border-white/8">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-white font-display">Recent Activity</h3>
-            <button onClick={() => onNavigate("chat")} className="text-[11px] font-semibold text-cyan-400 hover:underline flex items-center gap-1">
+            <h3 className="text-sm font-serif font-bold text-white">Recent Activity</h3>
+            <button 
+              onClick={() => onNavigate("chat")} 
+              className="text-xs font-medium text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+            >
               View Workspace
               <ChevronRight className="h-3 w-3" />
             </button>
@@ -345,14 +341,14 @@ export function DashboardView({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/5 text-[9px] text-slate-500 font-semibold uppercase tracking-wider">
+                <tr className="border-b border-white/8 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
                   <th className="pb-3">Investigation Name</th>
                   <th className="pb-3">Scope ID</th>
                   <th className="pb-3">Updated At</th>
                   <th className="pb-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 text-xs font-light">
+              <tbody className="divide-y divide-white/8 text-xs font-normal">
                 {loading && (
                   <tr>
                     <td colSpan={4} className="py-6 text-center text-slate-500">
@@ -370,13 +366,13 @@ export function DashboardView({
                 {!loading && items.slice(0, 5).map((conv) => (
                   <tr 
                     key={conv.conversationId} 
-                    className="hover:bg-slate-900/40 transition-all cursor-pointer group"
+                    className="hover:bg-white/5 transition-all cursor-pointer group"
                     onClick={() => {
                       onSelectConversation(conv.conversationId);
                       onNavigate("chat");
                     }}
                   >
-                    <td className="py-3.5 font-medium text-slate-200 pr-3 max-w-[200px] truncate group-hover:text-primary transition-colors">
+                    <td className="py-3.5 font-medium text-white pr-3 max-w-[200px] truncate">
                       {conv.disease || conv.patientName || "Untitled Investigation"}
                     </td>
                     <td className="py-3.5 text-slate-500 font-mono text-[10px]">
@@ -386,7 +382,7 @@ export function DashboardView({
                       {new Date(conv.updatedAt).toLocaleString()}
                     </td>
                     <td className="py-3.5 text-right">
-                      <span className="text-[10px] font-semibold text-cyan-400 group-hover:underline flex items-center gap-0.5 justify-end">
+                      <span className="text-[11px] font-semibold text-[#2563EB] group-hover:underline inline-flex items-center gap-0.5">
                         Resume
                         <ArrowUpRight className="h-3 w-3" />
                       </span>
@@ -399,9 +395,9 @@ export function DashboardView({
         </div>
 
         {/* Quick Actions Panel */}
-        <div className="glass-card p-5 rounded-2xl border border-white/5 flex flex-col justify-between">
+        <div className="editorial-card p-6 border border-white/8 flex flex-col justify-between">
           <div className="space-y-4">
-            <h3 className="text-sm font-bold text-white font-display">Workspace Actions</h3>
+            <h3 className="text-sm font-serif font-bold text-white">Workspace Actions</h3>
             <div className="space-y-3">
               {quickActions.map((action, i) => {
                 const Icon = action.icon;
@@ -409,14 +405,14 @@ export function DashboardView({
                   <button
                     key={i}
                     onClick={action.action}
-                    className="w-full text-left p-3 rounded-xl border border-white/5 bg-slate-950/40 hover:border-slate-800 transition-colors flex items-center gap-3 group"
+                    className="w-full text-left p-3.5 rounded-2xl border border-white/8 bg-black/40 hover:border-white/20 transition-all flex items-center gap-3 group cursor-pointer"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 border border-slate-800 text-slate-300 group-hover:text-primary group-hover:border-primary/20 transition-colors">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 border border-white/10 text-white group-hover:bg-[#2563EB] transition-colors">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div>
-                      <div className="text-[11px] font-semibold text-slate-200 group-hover:text-primary transition-colors">{action.title}</div>
-                      <div className="text-[9px] text-slate-500 mt-0.5">{action.desc}</div>
+                      <div className="text-xs font-medium text-white group-hover:text-white transition-colors">{action.title}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{action.desc}</div>
                     </div>
                   </button>
                 );
@@ -424,7 +420,7 @@ export function DashboardView({
             </div>
           </div>
 
-          <div className="border-t border-slate-800/60 pt-4 mt-4 text-[10px] text-slate-500 text-center font-light leading-relaxed">
+          <div className="border-t border-white/8 pt-4 mt-4 text-[10px] text-slate-500 text-center font-normal leading-relaxed">
             HIPAA Audit Active · Compliance logs active in session.
           </div>
         </div>

@@ -5,22 +5,22 @@ import {
   createRootRouteWithContext,
   useRouter,
 } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-black px-4 text-white">
+      <div className="max-w-md text-center space-y-4">
+        <h1 className="text-8xl font-serif font-bold text-slate-600">404</h1>
+        <h2 className="text-2xl font-serif font-bold text-white">Page not found</h2>
+        <p className="text-xs sm:text-sm text-slate-400 font-normal">
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
+        <div className="pt-2">
+          <Link to="/">
+            <Button size="default">
+              Go home
+            </Button>
           </Link>
         </div>
       </div>
@@ -33,27 +33,26 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-black px-4 text-white">
+      <div className="max-w-md text-center space-y-4">
+        <h1 className="text-2xl font-serif font-bold text-white">
           This page didn&apos;t load
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-slate-400 font-normal">
           Something went wrong. Try refreshing or head back home.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
+        <div className="pt-2 flex flex-wrap justify-center gap-3">
+          <Button
             onClick={() => { router.invalidate(); reset(); }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            size="default"
           >
             Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Go home
-          </a>
+          </Button>
+          <Link to="/">
+            <Button variant="outline" size="default">
+              Go home
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

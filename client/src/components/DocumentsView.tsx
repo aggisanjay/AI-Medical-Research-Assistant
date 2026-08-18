@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileText,
-  Upload,
   Trash2,
   Loader2,
   CheckCircle2,
@@ -69,10 +68,10 @@ export function DocumentsView({ onDocumentsChange }: DocumentsViewProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-white font-display">Document Library</h1>
-        <p className="text-sm text-slate-400 mt-1 font-light">
+    <div className="max-w-4xl space-y-6 pb-16">
+      <div className="border-b border-white/8 pb-6">
+        <h1 className="text-3xl font-serif font-bold text-white tracking-tight">Document Library</h1>
+        <p className="text-xs sm:text-sm text-slate-400 mt-1 font-normal">
           Upload clinical notes or research papers. Select documents in the Research Workspace to
           ground AI responses.
         </p>
@@ -89,10 +88,10 @@ export function DocumentsView({ onDocumentsChange }: DocumentsViewProps) {
         }}
         onClick={() => inputRef.current?.click()}
         className={cn(
-          "relative rounded-2xl border-2 border-dashed p-10 text-center cursor-pointer transition-all",
+          "relative rounded-3xl border-2 border-dashed p-10 text-center cursor-pointer transition-all duration-200",
           dragActive
-            ? "border-cyan-500/50 bg-cyan-500/5"
-            : "border-white/10 bg-slate-900/40 hover:border-blue-500/30 hover:bg-slate-900/60"
+            ? "border-white/40 bg-white/5"
+            : "border-white/10 bg-[#0a0a0a] hover:border-white/20 hover:bg-[#121212]"
         )}
       >
         <input
@@ -104,10 +103,10 @@ export function DocumentsView({ onDocumentsChange }: DocumentsViewProps) {
         />
         <div className="flex flex-col items-center gap-3">
           {uploading ? (
-            <Loader2 className="h-10 w-10 text-cyan-400 animate-spin" />
+            <Loader2 className="h-10 w-10 text-white animate-spin" />
           ) : (
-            <div className="h-12 w-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <FileUp className="h-6 w-6 text-blue-400" />
+            <div className="h-12 w-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white">
+              <FileUp className="h-5 w-5" />
             </div>
           )}
           <div>
@@ -120,47 +119,47 @@ export function DocumentsView({ onDocumentsChange }: DocumentsViewProps) {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-xs text-red-400 bg-red-950/20 border border-red-900/30 rounded-lg px-3.5 py-2.5">
+        <div className="flex items-center gap-2 text-xs text-red-400 bg-red-950/30 border border-red-900/30 rounded-2xl px-4 py-3">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 rounded-lg px-3.5 py-2.5">
+        <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-900/30 rounded-2xl px-4 py-3">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           {success}
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/5 bg-slate-900/40 overflow-hidden">
-        <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+      <div className="editorial-card border border-white/8 overflow-hidden">
+        <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between">
+          <span className="text-xs font-semibold text-white uppercase tracking-wider">
             Your Documents
           </span>
           <span className="text-[10px] text-slate-500 font-mono">{documents.length} files</span>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-slate-500">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          <div className="flex items-center justify-center py-12 text-slate-500 text-xs">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
             Loading…
           </div>
         ) : documents.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-500 font-light">
-            No documents yet. Upload a .txt file to get started.
+          <div className="py-12 text-center text-xs text-slate-500 font-normal">
+            No documents yet. Upload a PDF or TXT file to get started.
           </div>
         ) : (
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-white/8">
             {documents.map((doc) => (
               <li
                 key={doc.documentId}
-                className="flex items-center gap-4 px-5 py-4 hover:bg-slate-900/60 transition-colors"
+                className="flex items-center gap-4 px-6 py-4 hover:bg-white/5 transition-colors"
               >
-                <div className="h-10 w-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0">
-                  <FileText className="h-5 w-5 text-purple-400" />
+                <div className="h-9 w-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0">
+                  <FileText className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{doc.filename}</p>
+                  <p className="text-xs font-medium text-white truncate">{doc.filename}</p>
                   <p className="text-[10px] text-slate-500 mt-0.5">
                     {doc.chunkCount} chunks · {((doc.charCount || 0) / 1024).toFixed(1)} KB ·{" "}
                     {doc.mimeType === "application/pdf" ? "PDF" : "TXT"}
@@ -169,10 +168,10 @@ export function DocumentsView({ onDocumentsChange }: DocumentsViewProps) {
                 <StatusBadge status={doc.status} />
                 <button
                   onClick={() => handleDelete(doc.documentId)}
-                  className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="p-2 rounded-full text-slate-500 hover:text-red-400 hover:bg-white/5 transition-colors cursor-pointer"
                   title="Delete document"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </li>
             ))}
@@ -186,20 +185,20 @@ export function DocumentsView({ onDocumentsChange }: DocumentsViewProps) {
 function StatusBadge({ status }: { status: string }) {
   if (status === "ready") {
     return (
-      <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
         Ready
       </span>
     );
   }
   if (status === "processing") {
     return (
-      <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+      <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
         Processing
       </span>
     );
   }
   return (
-    <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+    <span className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
       Failed
     </span>
   );

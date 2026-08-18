@@ -1,4 +1,3 @@
-import React from "react";
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -39,7 +38,6 @@ export function ExecutiveSummaryCard({ message }: Props) {
         .filter(line => line.startsWith("-") || line.startsWith("*") || line.startsWith("•") || /^\d+\./.test(line))
         .map(line => line.replace(/^([-*•]|\d+\.)\s*/, "").trim());
 
-      // Fallback: If no bullet points are found, treat the whole trimmed text as lines
       const displayLines = cleanBullets.length > 0 ? cleanBullets : bodyLines.map(line => line.trim());
 
       if (heading.includes("key findings")) {
@@ -62,7 +60,6 @@ export function ExecutiveSummaryCard({ message }: Props) {
 
   const sections = parseSections(message.content);
 
-  // Helper to extract a single word confidence level (High/Medium/Low)
   const getConfidenceLevel = (lines: string[]): "High" | "Medium" | "Low" | "Unknown" => {
     const text = lines.join(" ").toLowerCase();
     if (text.includes("high")) return "High";
@@ -72,36 +69,7 @@ export function ExecutiveSummaryCard({ message }: Props) {
   };
 
   const confidenceLevel = getConfidenceLevel(sections.confidence);
-  
-  // Style config for confidence level
-  const confidenceStyles = {
-    High: {
-      bg: "bg-emerald-500/10",
-      text: "text-emerald-400",
-      border: "border-emerald-500/25",
-      dot: "bg-emerald-500"
-    },
-    Medium: {
-      bg: "bg-amber-500/10",
-      text: "text-amber-400",
-      border: "border-amber-500/25",
-      dot: "bg-amber-500"
-    },
-    Low: {
-      bg: "bg-rose-500/10",
-      text: "text-rose-400",
-      border: "border-rose-500/25",
-      dot: "bg-rose-500"
-    },
-    Unknown: {
-      bg: "bg-slate-500/10",
-      text: "text-slate-400",
-      border: "border-slate-500/25",
-      dot: "bg-slate-500"
-    }
-  }[confidenceLevel];
 
-  // Helper to extract numeric metrics from sources used
   const extractSourcesMetrics = (lines: string[]) => {
     let sourceCount = message.publications?.length || 0;
     let citationCount = message.clinicalTrials?.length || 0;
@@ -123,35 +91,33 @@ export function ExecutiveSummaryCard({ message }: Props) {
   const metrics = extractSourcesMetrics(sections.sourcesUsed);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-lg shadow-2xl relative overflow-hidden animate-slide-up">
-      {/* SaaS Dashboard Accent Line */}
-      <div className="absolute left-0 top-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600" />
+    <div className="editorial-card border border-white/8 relative overflow-hidden">
       
       {/* Header Panel */}
-      <div className="px-6 py-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="px-6 py-5 border-b border-white/8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-blue-400 flex items-center gap-1 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+            <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 flex items-center gap-1 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/10">
               <ShieldCheck className="h-3 w-3" />
-              Executive Support
+              Executive Synthesis
             </span>
           </div>
-          <h2 className="text-lg font-bold text-white font-display">Executive Briefing</h2>
+          <h2 className="text-base font-serif font-bold text-white">Executive Briefing</h2>
         </div>
 
         {/* Confidence & Sources Summary Indicators */}
         <div className="flex items-center flex-wrap gap-2.5">
           {confidenceLevel !== "Unknown" && (
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${confidenceStyles.bg} ${confidenceStyles.text} ${confidenceStyles.border}`}>
-              <span className={`h-2.5 w-2.5 rounded-full ${confidenceStyles.dot} animate-pulse`} />
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border border-white/10 bg-white/5 text-white">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               {confidenceLevel} Confidence
             </div>
           )}
           
-          <div className="flex items-center gap-3 px-3.5 py-1 rounded-full bg-slate-950/40 border border-white/5 text-[11px] text-slate-400 font-medium">
-            <span className="flex items-center gap-1"><Database className="h-3.5 w-3.5 text-cyan-400" /> {metrics.sourceCount} Sources</span>
-            <span className="h-3 w-px bg-slate-800" />
-            <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-purple-400" /> {metrics.citationCount} Citations</span>
+          <div className="flex items-center gap-3 px-3.5 py-1 rounded-full bg-black/60 border border-white/8 text-[11px] text-slate-400 font-normal">
+            <span className="flex items-center gap-1"><Database className="h-3.5 w-3.5 text-white" /> {metrics.sourceCount} Sources</span>
+            <span className="h-3 w-px bg-white/10" />
+            <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-white" /> {metrics.citationCount} Citations</span>
           </div>
         </div>
       </div>
@@ -162,16 +128,16 @@ export function ExecutiveSummaryCard({ message }: Props) {
         {/* Row 1: Key Findings & Recommended Actions */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Key Findings Card */}
-          <div className="rounded-xl border border-white/5 bg-slate-950/20 p-5 space-y-3.5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-              <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+          <div className="rounded-2xl border border-white/8 bg-black/40 p-5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-white">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
               Key Findings
             </div>
-            <ul className="space-y-2.5 text-xs text-slate-350 font-light leading-relaxed">
+            <ul className="space-y-2 text-xs text-slate-300 font-normal leading-relaxed">
               {sections.keyFindings.length > 0 ? (
                 sections.keyFindings.map((bullet, idx) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <span className="text-emerald-400 mt-1 select-none">•</span>
+                    <span className="text-white mt-1 select-none">•</span>
                     <span>{bullet}</span>
                   </li>
                 ))
@@ -182,16 +148,16 @@ export function ExecutiveSummaryCard({ message }: Props) {
           </div>
 
           {/* Recommended Actions Card */}
-          <div className="rounded-xl border border-white/5 bg-slate-950/20 p-5 space-y-3.5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-              <ArrowRight className="h-4.5 w-4.5 text-blue-400" />
+          <div className="rounded-2xl border border-white/8 bg-black/40 p-5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-white">
+              <ArrowRight className="h-4 w-4 text-[#2563EB]" />
               Recommended Actions
             </div>
-            <ul className="space-y-2.5 text-xs text-slate-350 font-light leading-relaxed">
+            <ul className="space-y-2 text-xs text-slate-300 font-normal leading-relaxed">
               {sections.recommendedActions.length > 0 ? (
                 sections.recommendedActions.map((bullet, idx) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-1 select-none">→</span>
+                    <span className="text-[#2563EB] mt-1 select-none">→</span>
                     <span>{bullet}</span>
                   </li>
                 ))
@@ -205,16 +171,16 @@ export function ExecutiveSummaryCard({ message }: Props) {
         {/* Row 2: Risks & Opportunities */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Risks & Gaps Card */}
-          <div className="rounded-xl border border-red-500/10 bg-red-500/5 p-5 space-y-3.5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-red-400">
-              <AlertTriangle className="h-4.5 w-4.5 text-red-400" />
+          <div className="rounded-2xl border border-white/8 bg-black/40 p-5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-red-400">
+              <AlertTriangle className="h-4 w-4 text-red-400" />
               Risks & Limitations
             </div>
-            <ul className="space-y-2.5 text-xs text-slate-300 font-light leading-relaxed">
+            <ul className="space-y-2 text-xs text-slate-300 font-normal leading-relaxed">
               {sections.risks.length > 0 ? (
                 sections.risks.map((bullet, idx) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <span className="text-red-400/80 mt-1 select-none">•</span>
+                    <span className="text-red-400 mt-1 select-none">•</span>
                     <span>{bullet}</span>
                   </li>
                 ))
@@ -225,16 +191,16 @@ export function ExecutiveSummaryCard({ message }: Props) {
           </div>
 
           {/* Opportunities Card */}
-          <div className="rounded-xl border border-cyan-500/10 bg-cyan-500/5 p-5 space-y-3.5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-cyan-400">
-              <Sparkles className="h-4.5 w-4.5 text-cyan-400" />
+          <div className="rounded-2xl border border-white/8 bg-black/40 p-5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-white">
+              <Sparkles className="h-4 w-4 text-blue-400" />
               Opportunities
             </div>
-            <ul className="space-y-2.5 text-xs text-slate-300 font-light leading-relaxed">
+            <ul className="space-y-2 text-xs text-slate-300 font-normal leading-relaxed">
               {sections.opportunities.length > 0 ? (
                 sections.opportunities.map((bullet, idx) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <span className="text-cyan-400/80 mt-1 select-none">•</span>
+                    <span className="text-blue-400 mt-1 select-none">•</span>
                     <span>{bullet}</span>
                   </li>
                 ))
@@ -247,7 +213,7 @@ export function ExecutiveSummaryCard({ message }: Props) {
 
         {/* Confidence Explanation Block */}
         {sections.confidence.length > 0 && sections.confidence[0] && (
-          <div className="text-[11px] text-slate-500 font-light pt-2 border-t border-white/5">
+          <div className="text-[11px] text-slate-500 font-normal pt-2 border-t border-white/8">
             <span className="font-semibold text-slate-400">Confidence Assessment Justification: </span>
             {sections.confidence.join(" ")}
           </div>

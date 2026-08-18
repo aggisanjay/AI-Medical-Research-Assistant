@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { 
-  Activity, Loader2, Sparkles, FlaskConical, BookOpen, 
-  Globe, Bell, HelpCircle, ChevronDown, 
-  ShieldCheck, ArrowUpRight, Cpu, LogOut, AlertCircle
+  Sparkles, FlaskConical, BookOpen, 
+  Globe, Bell, HelpCircle, 
+  ShieldCheck, AlertCircle
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { StructuredInput } from "@/components/StructuredInput";
@@ -36,7 +36,7 @@ export function CuralinkApp() {
   const [conversations, setConversations] = useState<any[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
 
-  // Chat/API States (Original logic preserved)
+  // Chat/API States
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
@@ -60,16 +60,6 @@ export function CuralinkApp() {
       scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [messages, sending, activeTab, workflowSteps]);
-
-  const initials = userName
-    ? userName
-        .split(" ")
-        .filter(Boolean)
-        .map((n) => n[0])
-        .join("")
-        .substring(0, 2)
-        .toUpperCase()
-    : "SJ";
 
   // Centralized fetch conversations list
   const fetchConversations = () => {
@@ -232,42 +222,42 @@ export function CuralinkApp() {
 
   const renderChatWorkspace = () => {
     return (
-      <div className="flex-1 flex flex-col min-h-0 relative animate-fade-in">
-        <header className="border-b border-white/5 bg-slate-950/20 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-white font-display">
+      <div className="flex-1 flex flex-col min-h-0 relative">
+        <header className="border-b border-white/8 bg-black px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-serif font-bold text-white">
               {messages.length > 0 ? "Research Conversation" : "New Clinical Investigation"}
             </h2>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-500 font-mono">
+            <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#121212] border border-white/10 text-slate-400 font-mono">
               {messages.length} {messages.length === 1 ? "message" : "messages"}
             </span>
           </div>
-          <div className="hidden md:flex items-center gap-3 text-[10px] text-slate-400 font-semibold">
-            <Pill icon={BookOpen} label="PubMed" color="text-purple-400" />
-            <Pill icon={Globe} label="OpenAlex" color="text-pink-400" />
-            <Pill icon={FlaskConical} label="ClinicalTrials.gov" color="text-emerald-400" />
+          <div className="hidden md:flex items-center gap-3 text-[10px] text-slate-400 font-medium">
+            <Pill icon={BookOpen} label="PubMed" />
+            <Pill icon={Globe} label="OpenAlex" />
+            <Pill icon={FlaskConical} label="ClinicalTrials.gov" />
           </div>
         </header>
 
-        <div ref={scrollerRef} className="flex-1 overflow-y-auto min-h-0">
+        <div ref={scrollerRef} className="flex-1 overflow-y-auto min-h-0 bg-black">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto px-6 text-center space-y-6 animate-fade-in">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-xl pulse-cyan-glow">
-                <Sparkles className="h-6 w-6" />
+            <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto px-6 text-center space-y-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-lg">
+                C
               </div>
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight text-white font-display">
+                <h1 className="text-3xl font-serif font-bold tracking-tight text-white">
                   Start a New Investigation
                 </h1>
-                <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Enter your clinical query below. Curalink's multi-agent system will federate searches across PubMed, OpenAlex, and ClinicalTrials.gov to generate structured evidence briefs.
+                <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto leading-relaxed font-normal">
+                  Enter your clinical query below. Curalink's multi-agent system federates searches across PubMed, OpenAlex, and ClinicalTrials.gov to generate structured evidence briefs.
                 </p>
               </div>
               <div className="w-full pt-4">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
                   Quick-Start Queries
                 </div>
-                <div className="grid sm:grid-cols-2 gap-2 text-left">
+                <div className="grid sm:grid-cols-2 gap-2.5 text-left">
                   {[
                     "Latest immunotherapy approaches for stage IV melanoma",
                     "Emerging cancer immunotherapy approaches",
@@ -277,10 +267,10 @@ export function CuralinkApp() {
                     <button
                       key={q}
                       onClick={() => handleSubmit({ message: q })}
-                      className="group flex items-center gap-2 rounded-xl border border-white/5 bg-slate-900/35 hover:bg-slate-900 hover:border-blue-500/30 p-3 text-xs hover:shadow-lg transition-all duration-300 text-slate-350 cursor-pointer"
+                      className="group flex items-center gap-2.5 rounded-2xl border border-white/8 bg-[#0a0a0a] hover:border-white/20 p-3.5 text-xs transition-all duration-200 text-slate-300 hover:text-white cursor-pointer"
                     >
-                      <Sparkles className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-                      <span className="text-slate-300 group-hover:text-white transition-colors truncate">{q}</span>
+                      <Sparkles className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                      <span className="truncate font-normal">{q}</span>
                     </button>
                   ))}
                 </div>
@@ -292,7 +282,7 @@ export function CuralinkApp() {
                 <MessageBubble key={i} message={m} onSuggestion={handleSuggestion} />
               ))}
               {sending && (
-                <div className="animate-slide-up">
+                <div>
                   <AgentWorkflowPanel steps={workflowSteps} isLoading />
                 </div>
               )}
@@ -300,14 +290,14 @@ export function CuralinkApp() {
           )}
         </div>
 
-        <div className="border-t border-white/5 bg-slate-950/40 px-6 py-4">
+        <div className="border-t border-white/8 bg-black px-6 py-4">
           <div className="max-w-4xl mx-auto">
             {error && (
-              <div className="mb-3 text-xs text-red-400 bg-red-950/20 border border-red-900/30 rounded-xl px-4 py-3 flex items-start gap-2.5 shadow-[0_4px_12px_rgba(239,68,68,0.08)]">
-                <AlertCircle className="h-4.5 w-4.5 text-red-400 shrink-0 mt-0.5" />
+              <div className="mb-3 text-xs text-red-400 bg-red-950/30 border border-red-900/30 rounded-2xl px-4 py-3 flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-red-300">Pipeline Diagnostic Alert</div>
-                  <div className="text-[11px] mt-0.5 text-red-400/90 font-light">{error}</div>
+                  <div className="font-semibold text-red-300">Pipeline Alert</div>
+                  <div className="text-[11px] mt-0.5 text-red-400/90 font-normal">{error}</div>
                 </div>
               </div>
             )}
@@ -318,7 +308,7 @@ export function CuralinkApp() {
               selectedDocumentIds={selectedDocumentIds}
               onDocumentIdsChange={setSelectedDocumentIds}
             />
-            <p className="mt-2 text-[10px] text-slate-500 text-center font-light">
+            <p className="mt-2 text-[10px] text-slate-500 text-center font-normal">
               Curalink aggregates open access data. Validate critical mutations with peer-reviewed oncology teams.
             </p>
           </div>
@@ -329,14 +319,14 @@ export function CuralinkApp() {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[#020617] text-white relative overflow-hidden mesh-gradient">
-        <div className="flex flex-col items-center gap-4 relative z-10">
-          <div className="h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-2xl flex pulse-cyan-glow animate-pulse">
-            <Activity className="h-8 w-8" />
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-black text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-lg animate-pulse">
+            C
           </div>
           <div className="text-center">
-            <h2 className="text-lg font-bold text-white font-display">Curalink Terminal</h2>
-            <p className="text-xs text-slate-500 font-light mt-1 animate-pulse">Establishing HIPAA-Secure Sandbox...</p>
+            <h2 className="text-base font-serif font-bold text-white">Curalink Enterprise</h2>
+            <p className="text-xs text-slate-500 font-normal mt-1">Initializing Secure Sandbox...</p>
           </div>
         </div>
       </div>
@@ -348,7 +338,7 @@ export function CuralinkApp() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#020617] text-slate-100 font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-black text-slate-100 font-sans overflow-hidden">
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -363,42 +353,41 @@ export function CuralinkApp() {
       />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 border-b border-white/5 bg-slate-950/40 px-6 flex items-center justify-between shrink-0">
+        <header className="h-16 border-b border-white/8 bg-black px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs text-slate-400 font-light flex items-center gap-1.5 bg-slate-900/60 border border-slate-850 px-3 py-1 rounded-full shrink-0">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs text-slate-400 font-normal flex items-center gap-2 bg-[#0a0a0a] border border-white/8 px-3 py-1 rounded-full shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Clinical Terminal
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/20 border border-cyan-900/30 text-[10px] text-cyan-400 font-semibold">
-              <ShieldCheck className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0a0a0a] border border-white/8 text-[10px] text-slate-300 font-medium">
+              <ShieldCheck className="h-3 w-3 text-slate-400" />
               HIPAA Encrypted
             </div>
 
-            <button className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-900 hover:text-white text-slate-400 transition-colors relative">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-cyan-400" />
+            <button className="p-2 rounded-full border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white transition-colors relative cursor-pointer">
+              <Bell className="h-3.5 w-3.5" />
             </button>
 
-            <button className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-900 hover:text-white text-slate-400 transition-colors">
-              <HelpCircle className="h-4 w-4" />
+            <button className="p-2 rounded-full border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white transition-colors cursor-pointer">
+              <HelpCircle className="h-3.5 w-3.5" />
             </button>
 
             {/* Profile Dropdown */}
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-800/80 py-2">
+            <div className="flex items-center gap-2 pl-2 border-l border-white/8 py-1">
               <Show when="signed-in">
                 <UserButton />
               </Show>
-              <span className="hidden md:inline-block text-xs font-semibold text-slate-350">
+              <span className="hidden md:inline-block text-xs font-medium text-slate-300">
                 {userName}
               </span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 flex min-h-0 relative">
+        <div className="flex-1 flex min-h-0 relative bg-black">
           <main className={cn(
             "flex-1 min-w-0",
             activeTab === "chat" ? "overflow-hidden flex flex-col" : "overflow-y-auto px-6 py-8"
@@ -407,18 +396,16 @@ export function CuralinkApp() {
               {renderContentView()}
             </div>
           </main>
-
-
         </div>
       </div>
     </div>
   );
 }
 
-function Pill({ icon: Icon, label, color }: { icon: any; label: string; color: string }) {
+function Pill({ icon: Icon, label }: { icon: any; label: string }) {
   return (
-    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800">
-      <Icon className={color + " h-3.5 w-3.5"} />
+    <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0a0a0a] border border-white/8 text-slate-400">
+      <Icon className="h-3 w-3 text-white" />
       {label}
     </span>
   );

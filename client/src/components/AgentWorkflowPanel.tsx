@@ -21,23 +21,23 @@ const AGENT_CONFIG: Record<
 > = {
   "Research Agent": {
     icon: Search,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/25",
+    color: "text-white",
+    bg: "bg-white/5",
+    border: "border-white/10",
     description: "Context resolution, query expansion, literature retrieval & document RAG",
   },
   "Evidence Agent": {
     icon: BarChart3,
-    color: "text-cyan-400",
-    bg: "bg-cyan-500/10",
-    border: "border-cyan-500/25",
+    color: "text-white",
+    bg: "bg-white/5",
+    border: "border-white/10",
     description: "Ranking, confidence scoring & source validation",
   },
   "Summary Agent": {
     icon: FileText,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/25",
+    color: "text-white",
+    bg: "bg-white/5",
+    border: "border-white/10",
     description: "LLM synthesis, citation generation & executive summary",
   },
 };
@@ -50,13 +50,13 @@ function formatDuration(ms: number): string {
 function StatusIcon({ status }: { status: WorkflowStep["status"] }) {
   switch (status) {
     case "completed":
-      return <CheckCircle2 className="h-4 w-4 text-emerald-400" />;
+      return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />;
     case "running":
-      return <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />;
+      return <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />;
     case "failed":
-      return <XCircle className="h-4 w-4 text-red-400" />;
+      return <XCircle className="h-3.5 w-3.5 text-red-400" />;
     default:
-      return <Circle className="h-4 w-4 text-slate-600" />;
+      return <Circle className="h-3.5 w-3.5 text-slate-600" />;
   }
 }
 
@@ -70,7 +70,7 @@ function MetadataGrid({ metadata }: { metadata: Record<string, unknown> }) {
     <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px]">
       {entries.map(([key, value]) => (
         <div key={key} className="flex flex-col">
-          <span className="text-slate-500 capitalize">
+          <span className="text-slate-500 capitalize font-normal">
             {key.replace(/([A-Z])/g, " $1").trim()}
           </span>
           <span className="text-slate-300 font-mono truncate">
@@ -118,12 +118,12 @@ export function AgentWorkflowPanel({
   const header = (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 border border-primary/25">
-          <Bot className="h-4 w-4 text-blue-400" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 border border-white/10">
+          <Bot className="h-3.5 w-3.5 text-white" />
         </div>
         <div>
-          <h3 className="text-xs font-bold text-white font-display">Agent Workflow</h3>
-          <p className="text-[10px] text-slate-500 font-light">
+          <h3 className="text-xs font-serif font-bold text-white">Agent Workflow</h3>
+          <p className="text-[10px] text-slate-500 font-normal">
             {isLoading
               ? "Agents processing your query…"
               : `${completedCount}/${displaySteps.length} agents completed`}
@@ -132,7 +132,7 @@ export function AgentWorkflowPanel({
       </div>
       <div className="flex items-center gap-2">
         {totalDuration > 0 && (
-          <span className="flex items-center gap-1 text-[10px] text-slate-400 font-mono bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-800">
+          <span className="flex items-center gap-1 text-[10px] text-slate-400 font-mono bg-black/60 px-2.5 py-0.5 rounded-full border border-white/8">
             <Clock className="h-3 w-3" />
             {formatDuration(totalDuration)}
           </span>
@@ -140,7 +140,7 @@ export function AgentWorkflowPanel({
         {collapsible && (
           <ChevronDown
             className={cn(
-              "h-4 w-4 text-slate-500 transition-transform",
+              "h-3.5 w-3.5 text-slate-500 transition-transform",
               expanded && "rotate-180"
             )}
           />
@@ -157,8 +157,8 @@ export function AgentWorkflowPanel({
         const config = AGENT_CONFIG[step.agent] || {
           icon: Bot,
           color: "text-slate-400",
-          bg: "bg-slate-500/10",
-          border: "border-slate-500/25",
+          bg: "bg-white/5",
+          border: "border-white/10",
           description: "",
         };
         const Icon = config.icon;
@@ -170,38 +170,38 @@ export function AgentWorkflowPanel({
               <div
                 className={cn(
                   "absolute left-[15px] top-8 w-px h-[calc(100%-8px)]",
-                  step.status === "completed" ? "bg-emerald-500/30" : "bg-slate-800"
+                  step.status === "completed" ? "bg-white/20" : "bg-white/8"
                 )}
               />
             )}
 
             <div
               className={cn(
-                "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+                "relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border",
                 config.bg,
                 config.border,
                 step.status === "running" && "animate-pulse"
               )}
             >
-              <Icon className={cn("h-4 w-4", config.color)} />
+              <Icon className={cn("h-3.5 w-3.5", config.color)} />
             </div>
 
             <div
               className={cn(
-                "flex-1 pb-4 min-w-0 rounded-xl border px-3.5 py-2.5 transition-all",
+                "flex-1 pb-4 min-w-0 rounded-2xl border px-3.5 py-2.5 transition-all",
                 step.status === "running"
-                  ? "border-cyan-500/30 bg-cyan-500/5"
+                  ? "border-white/20 bg-white/5"
                   : step.status === "completed"
-                    ? "border-white/5 bg-slate-900/40"
+                    ? "border-white/8 bg-black/40"
                     : step.status === "failed"
                       ? "border-red-500/30 bg-red-500/5"
-                      : "border-white/5 bg-slate-950/40 opacity-60"
+                      : "border-white/8 bg-black/20 opacity-50"
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <StatusIcon status={step.status} />
-                  <span className="text-xs font-semibold text-slate-200 truncate">
+                  <span className="text-xs font-medium text-white truncate">
                     {step.agent}
                   </span>
                 </div>
@@ -213,7 +213,7 @@ export function AgentWorkflowPanel({
               </div>
 
               {config.description && (
-                <p className="mt-1 text-[10px] text-slate-500 font-light leading-relaxed">
+                <p className="mt-1 text-[10px] text-slate-500 font-normal leading-relaxed">
                   {config.description}
                 </p>
               )}
@@ -232,8 +232,7 @@ export function AgentWorkflowPanel({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-white/5 bg-slate-950/60 backdrop-blur-md p-4 shadow-xl",
-        isLoading && "border-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.08)]",
+        "editorial-card border border-white/8 p-4",
         className
       )}
     >
@@ -241,7 +240,7 @@ export function AgentWorkflowPanel({
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="w-full text-left"
+          className="w-full text-left cursor-pointer"
         >
           {header}
         </button>
