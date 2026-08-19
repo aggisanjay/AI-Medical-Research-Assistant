@@ -234,8 +234,11 @@ You MUST follow this EXACT structure. Do not skip any section.
 | **Phase** | [Phase] |
 | **Location** | 📍 [Location details] |
 | **Contact** | 📞 [Contact name/phone/email] |
-| **Eligibility** | [4 bullet points of criteria] |
 | **Registry** | [View on ClinicalTrials.gov →](URL) |
+
+**Key Eligibility Criteria:**
+* **Inclusion:** [Key criteria point 1] • [Key criteria point 2]
+* **Exclusion:** [Key exclusion point 1] • [Key exclusion point 2]
 
 [Continue for ALL provided trials]
 
@@ -332,22 +335,52 @@ class LLMService {
     console.log(`🤖 LLM Provider: ${this.provider.toUpperCase()}`);
 
     try {
+      let rawResponse;
       switch (this.provider) {
         case 'huggingface':
-          return await this._callHuggingFace(messages);
+          rawResponse = await this._callHuggingFace(messages);
+          break;
 
         case 'ollama':
-          return await this._callOllama(messages);
+          rawResponse = await this._callOllama(messages);
+          break;
 
         default:
           console.warn(`⚠️ Unknown provider "${this.provider}", using fallback`);
-          return this._buildFallbackResponse(params);
+          rawResponse = this._buildFallbackResponse(params);
+          break;
       }
+      return this._cleanResponseMarkdown(rawResponse);
     } catch (error) {
       console.error(`❌ LLM Error: ${error.message}`);
       console.log('🔄 Activating fallback template engine...');
-      return this._buildFallbackResponse(params);
+      return this._cleanResponseMarkdown(this._buildFallbackResponse(params));
     }
+  }
+
+  _cleanResponseMarkdown(text) {
+    if (!text) return text;
+    // 1. Fix multiline eligibility breaking out of table rows
+    let cleaned = text.replace(
+      /\|\s*\*{0,2}Eligibility\*{0,2}\s*\|\s*\n([\s\S]*?)(?:\|\|\s*Registry\s*\|\s*(\[.*?\]\(.*?\)|https?:\/\/[^\s|]+)\s*\||\|\s*\*{0,2}Registry\*{0,2}\s*\|\s*(\[.*?\]\(.*?\)|https?:\/\/[^\s|]+)\s*\|)/gi,
+      (_, criteria, reg1, reg2) => {
+        const reg = reg1 || reg2 || '';
+        return `| **Registry** | ${reg} |\n\n**Key Eligibility Criteria:**\n${criteria.trim()}`;
+      }
+    );
+
+    // 2. Fix broken double pipes
+    cleaned = cleaned.replace(/\|\|\s*Registry\s*\|/gi, '| **Registry** |');
+
+    // 3. Fix unclosed eligibility rows before subsequent trial headings
+    cleaned = cleaned.replace(
+      /\|\s*\*{0,2}Eligibility\*{0,2}\s*\|\s*\n([\s\S]*?)(?=\n#{3,4}\s+|\n---|\n###)/gi,
+      (_, criteria) => {
+        return `\n\n**Key Eligibility Criteria:**\n${criteria.trim()}`;
+      }
+    );
+
+    return cleaned;
   }
 
   // ─── Provider: HuggingFace Router API ────────────────────

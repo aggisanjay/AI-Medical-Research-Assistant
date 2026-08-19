@@ -270,8 +270,8 @@ export function LandingPage() {
           <div className="pt-8">
             <div className="editorial-img-container shadow-2xl max-w-5xl mx-auto">
               <img 
-                src="/images/hero_team.jpg" 
-                alt="Medical researchers collaborating with Curalink"
+                src="/images/hero_dashboard.png" 
+                alt="Curalink Evidence Analytics Dashboard Overview"
                 className="w-full h-auto object-cover max-h-[580px] rounded-3xl"
               />
             </div>
@@ -411,8 +411,8 @@ export function LandingPage() {
               className="editorial-img-container"
             >
               <img 
-                src="/images/feature_analysis.jpg" 
-                alt="Doctor performing clinical analysis"
+                src="/images/feature_analysis.png" 
+                alt="Agent Workflow and Multi-Agent Execution Diagnostics"
                 className="w-full h-auto object-cover rounded-3xl"
               />
             </motion.div>
@@ -435,8 +435,8 @@ export function LandingPage() {
               className="editorial-img-container order-2 lg:order-1"
             >
               <img 
-                src="/images/feature_synthesis.jpg" 
-                alt="Scientists reviewing scientific publications"
+                src="/images/feature_synthesis.png" 
+                alt="Research Insights and Publication Synthesis Table"
                 className="w-full h-auto object-cover rounded-3xl"
               />
             </motion.div>
@@ -566,8 +566,8 @@ export function LandingPage() {
               className="editorial-img-container"
             >
               <img 
-                src="/images/feature_matching.jpg" 
-                alt="Clinical team matching trial candidates"
+                src="/images/feature_matching.png" 
+                alt="Matched Clinical Registries and Trial Protocols"
                 className="w-full h-auto object-cover rounded-3xl"
               />
             </motion.div>

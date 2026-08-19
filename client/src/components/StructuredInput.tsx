@@ -64,36 +64,36 @@ export function StructuredInput({
   };
 
   return (
-    <div className="editorial-card border border-white/8 p-4 space-y-3">
-      <div className="flex items-center justify-between gap-1 px-1">
-        <div className="flex items-center gap-1.5 bg-black/60 p-1 rounded-full border border-white/8">
+    <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-2 sm:p-2.5 space-y-2 shadow-lg">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5">
+        <div className="flex items-center gap-1 bg-black/70 p-0.5 rounded-full border border-white/8">
           <button
             onClick={() => setMode("natural")}
-            className={`text-xs px-3 py-1 rounded-full font-medium transition-all ${
-              mode === "natural" ? "bg-white text-black" : "text-slate-400 hover:text-white"
+            className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium transition-all ${
+              mode === "natural" ? "bg-white text-black font-semibold shadow-xs" : "text-slate-400 hover:text-white"
             }`}
           >
-            <Sparkles className="inline h-3 w-3 mr-1" />
+            <Sparkles className="inline h-2.5 w-2.5 mr-1" />
             Natural
           </button>
           <button
             onClick={() => setMode("structured")}
-            className={`text-xs px-3 py-1 rounded-full font-medium transition-all ${
-              mode === "structured" ? "bg-white text-black" : "text-slate-400 hover:text-white"
+            className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium transition-all ${
+              mode === "structured" ? "bg-white text-black font-semibold shadow-xs" : "text-slate-400 hover:text-white"
             }`}
           >
-            <Stethoscope className="inline h-3 w-3 mr-1" />
+            <Stethoscope className="inline h-2.5 w-2.5 mr-1" />
             Structured
           </button>
         </div>
 
-        <div className="flex items-center gap-1 bg-black/60 p-1 rounded-full border border-white/8">
+        <div className="flex items-center gap-1 bg-black/70 p-0.5 rounded-full border border-white/8">
           <button
             onClick={() => {
               setResponseMode("standard");
               localStorage.setItem("curalink_response_mode", "standard");
             }}
-            className={`text-[10px] sm:text-xs px-3 py-1 rounded-full font-medium transition-all ${
+            className={`text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full font-medium transition-all ${
               responseMode === "standard"
                 ? "bg-[#18181b] text-white border border-white/10"
                 : "text-slate-400 hover:text-white"
@@ -106,9 +106,9 @@ export function StructuredInput({
               setResponseMode("executive");
               localStorage.setItem("curalink_response_mode", "executive");
             }}
-            className={`text-[10px] sm:text-xs px-3 py-1 rounded-full font-medium transition-all ${
+            className={`text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full font-medium transition-all ${
               responseMode === "executive"
-                ? "bg-[#2563EB] text-white font-semibold"
+                ? "bg-[#2563EB] text-white font-semibold shadow-xs"
                 : "text-slate-400 hover:text-white"
             }`}
           >
@@ -119,9 +119,9 @@ export function StructuredInput({
               setResponseMode("document");
               localStorage.setItem("curalink_response_mode", "document");
             }}
-            className={`text-[10px] sm:text-xs px-3 py-1 rounded-full font-medium transition-all ${
+            className={`text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full font-medium transition-all ${
               responseMode === "document"
-                ? "bg-white text-black font-semibold"
+                ? "bg-white text-black font-semibold shadow-xs"
                 : "text-slate-400 hover:text-white"
             }`}
           >
@@ -131,22 +131,22 @@ export function StructuredInput({
       </div>
 
       {responseMode === "document" && selectedDocumentIds.length === 0 && (
-        <div className="mx-1 text-[11px] text-slate-300 bg-black/60 border border-white/10 rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
-          <FileText className="h-4 w-4 text-white shrink-0" />
-          <div>
-            <div className="font-semibold text-white">Document Grounding Required</div>
-            <div className="text-[10px] text-slate-400 font-normal mt-0.5">Please select at least one of your uploaded documents below to enable search.</div>
+        <div className="text-[11px] text-slate-300 bg-black/60 border border-white/10 rounded-xl px-3 py-1.5 flex items-center gap-2">
+          <FileText className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+          <div className="text-[10px] text-slate-400">
+            <span className="font-semibold text-white mr-1">Select Document:</span>
+            Pick at least one uploaded document below to ground research.
           </div>
         </div>
       )}
 
       {responseMode === "document" && readyDocs.length > 0 && (
-        <div className="px-1">
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-1.5">
-            <FileText className="h-3 w-3 text-white" />
+        <div className="px-0.5">
+          <div className="flex items-center gap-1.5 text-[9px] text-slate-400 mb-1">
+            <FileText className="h-2.5 w-2.5 text-white" />
             Ground with documents
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1">
             {readyDocs.map((doc) => {
               const selected = selectedDocumentIds.includes(doc.documentId);
               return (
@@ -156,7 +156,7 @@ export function StructuredInput({
                   onClick={() => toggleDocument(doc.documentId)}
                   disabled={disabled}
                   className={cn(
-                    "text-[10px] px-3 py-1 rounded-full border transition-all truncate max-w-[180px]",
+                    "text-[9px] px-2.5 py-0.5 rounded-full border transition-all truncate max-w-[160px]",
                     selected
                       ? "bg-white text-black border-white font-medium"
                       : "bg-black/40 border-white/10 text-slate-400 hover:border-white/30 hover:text-white"
@@ -173,7 +173,7 @@ export function StructuredInput({
 
       {mode === "natural" ? (
         <>
-          <div className="flex items-end gap-2 bg-black/60 border border-white/8 rounded-2xl p-2.5 focus-within:border-white/20 transition-all">
+          <div className="flex items-center gap-2 bg-black border border-white/8 rounded-xl px-2.5 py-1.5 focus-within:border-white/20 transition-all">
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -184,50 +184,60 @@ export function StructuredInput({
                 }
               }}
               placeholder="Ask about treatments, trials, or recent research…"
-              rows={2}
-              className="flex-1 resize-none bg-transparent px-2 py-1 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none font-normal"
+              rows={1}
+              className="flex-1 resize-none bg-transparent px-1 py-0.5 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none font-normal min-h-[32px] max-h-[100px]"
               disabled={disabled}
             />
-            <button
-              onClick={submit}
-              disabled={disabled || !message.trim() || (responseMode === "document" && selectedDocumentIds.length === 0)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2563EB] text-white transition-all hover:bg-blue-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
-              aria-label="Send query"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((v) => !v)}
+                className={cn(
+                  "text-[10px] flex items-center gap-1 px-2 py-1 rounded-lg border transition-colors cursor-pointer",
+                  advancedOpen 
+                    ? "border-white/20 text-white bg-white/5" 
+                    : "border-transparent text-slate-500 hover:text-slate-300"
+                )}
+                title="Toggle Patient Context"
+              >
+                <User className="h-3 w-3" />
+                <span className="hidden sm:inline">Context</span>
+                {advancedOpen ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+              </button>
+              <button
+                onClick={submit}
+                disabled={disabled || !message.trim() || (responseMode === "document" && selectedDocumentIds.length === 0)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2563EB] text-white transition-all hover:bg-blue-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                aria-label="Send query"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setAdvancedOpen((v) => !v)}
-            className="text-[11px] text-slate-500 hover:text-slate-300 flex items-center gap-1 px-1 cursor-pointer transition-colors"
-          >
-            {advancedOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            Patient context
-          </button>
           {advancedOpen && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-1">
               <Field icon={User} value={patientName} onChange={setPatientName} placeholder="Patient name" />
-              <Field icon={Stethoscope} value={disease} onChange={setDisease} placeholder="Disease" />
+              <Field icon={Stethoscope} value={disease} onChange={setDisease} placeholder="Disease / Condition" />
               <Field icon={MapPin} value={location} onChange={setLocation} placeholder="Location" />
             </div>
           )}
         </>
       ) : (
-        <div className="space-y-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="space-y-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             <Field icon={User} value={patientName} onChange={setPatientName} placeholder="Patient name (optional)" />
             <Field icon={Stethoscope} value={disease} onChange={setDisease} placeholder="Disease / condition" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
-            <Field icon={Search} value={query} onChange={setQuery} placeholder="Specific question (e.g., latest immunotherapy)" onEnter={submit} />
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-1.5">
+            <Field icon={Search} value={query} onChange={setQuery} placeholder="Specific question (e.g. latest immunotherapy)" onEnter={submit} />
             <Field icon={MapPin} value={location} onChange={setLocation} placeholder="Location" />
           </div>
           <button
             onClick={submit}
             disabled={disabled || (!disease.trim() && !query.trim()) || (responseMode === "document" && selectedDocumentIds.length === 0)}
-            className="w-full flex items-center justify-center gap-2 rounded-full bg-[#2563EB] text-white py-2.5 text-xs font-semibold tracking-wide transition-all hover:bg-blue-600 disabled:opacity-40 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#2563EB] text-white py-2 text-xs font-semibold tracking-wide transition-all hover:bg-blue-600 disabled:opacity-40 cursor-pointer"
           >
-            <Search className="h-3.5 w-3.5" />
+            <Search className="h-3 w-3" />
             {responseMode === "document" ? "Search Document" : "Search Research"}
           </button>
         </div>
@@ -250,8 +260,8 @@ function Field({
   onEnter?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-2xl border border-white/8 bg-black/60 px-3 py-2">
-      <Icon className="h-3.5 w-3.5 text-slate-500" />
+    <div className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-black/60 px-2.5 py-1.5">
+      <Icon className="h-3 w-3 text-slate-500 shrink-0" />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}

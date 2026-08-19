@@ -46,21 +46,21 @@ export function Sidebar({
   return (
     <aside 
       className={cn(
-        "h-full flex flex-col bg-black text-slate-300 border-r border-white/8 transition-all duration-300 relative select-none",
-        isCollapsed ? "w-20" : "w-72"
+        "h-full flex flex-col bg-black text-slate-300 border-r border-white/8 transition-all duration-300 relative select-none shrink-0",
+        isCollapsed ? "w-16" : "w-60 xl:w-64"
       )}
     >
       
       {/* Brand Header */}
-      <div className="flex items-center justify-between px-5 py-5 border-b border-white/8">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-sm shrink-0">
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/8">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-xs shrink-0">
             C
           </div>
           {!isCollapsed && (
             <div className="min-w-0">
-              <div className="text-sm font-serif font-semibold tracking-tight text-white truncate">Curalink</div>
-              <div className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Enterprise</div>
+              <div className="text-xs font-serif font-semibold tracking-tight text-white truncate">Curalink</div>
+              <div className="text-[9px] text-slate-500 font-medium tracking-wider uppercase">Enterprise</div>
             </div>
           )}
         </div>
@@ -80,7 +80,7 @@ export function Sidebar({
         <div className="flex justify-center py-2 border-b border-white/8">
           <button 
             onClick={() => setIsCollapsed(false)}
-            className="p-1.5 rounded-full border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white transition-all"
+            className="p-1 rounded-full border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white transition-all"
             aria-label="Expand sidebar"
           >
             <ChevronRight className="h-3.5 w-3.5" />
@@ -89,7 +89,7 @@ export function Sidebar({
       )}
 
       {/* Navigation Sections */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
+      <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -101,9 +101,9 @@ export function Sidebar({
                   onTabChange(item.id);
                 }}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-full text-xs font-medium tracking-wide transition-all duration-200 relative",
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium tracking-wide transition-all duration-200 relative",
                   isActive 
-                    ? "bg-[#2563EB] text-white" 
+                    ? "bg-[#2563EB] text-white shadow-sm" 
                     : "text-slate-400 hover:bg-white/5 hover:text-white"
                 )}
               >
@@ -122,8 +122,8 @@ export function Sidebar({
 
         {/* Collapsible Recent Research (Only shown when activeTab is chat) */}
         {!isCollapsed && activeTab === "chat" && (
-          <div className="pt-5 border-t border-white/8 mt-5 space-y-2">
-            <div className="flex items-center justify-between px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+          <div className="pt-3 border-t border-white/8 mt-3 space-y-1.5">
+            <div className="flex items-center justify-between px-2.5 text-[9px] font-semibold text-slate-500 uppercase tracking-widest">
               <span>Recent Research</span>
               <button 
                 onClick={onNew}
@@ -134,14 +134,14 @@ export function Sidebar({
               </button>
             </div>
 
-            <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
+            <div className="space-y-1 max-h-[220px] overflow-y-auto pr-1">
               {loading && (
-                <div className="flex items-center justify-center py-4 text-slate-500">
+                <div className="flex items-center justify-center py-3 text-slate-500">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 </div>
               )}
               {!loading && items.length === 0 && (
-                <div className="px-3 py-4 text-[10px] text-slate-500 italic font-normal">
+                <div className="px-2.5 py-3 text-[10px] text-slate-500 italic font-normal">
                   No saved reports
                 </div>
               )}
@@ -153,7 +153,7 @@ export function Sidebar({
                     key={c.conversationId}
                     onClick={() => onSelect(c.conversationId)}
                     className={cn(
-                      "group w-full flex items-start justify-between gap-2 rounded-2xl px-3 py-2.5 text-left transition-all border",
+                      "group w-full flex items-start justify-between gap-1.5 rounded-xl px-2.5 py-2 text-left transition-all border",
                       isSelected 
                         ? "bg-[#121212] border-white/10 text-white font-medium" 
                         : "border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200"
@@ -165,7 +165,7 @@ export function Sidebar({
                         <div className="truncate text-xs">
                           {c.disease || c.patientName || "Untitled Research"}
                         </div>
-                        <div className="truncate text-[9px] text-slate-500 mt-0.5 font-normal">
+                        <div className="truncate text-[9px] text-slate-500 font-normal">
                           {c.lastMessage || `${c.messageCount} searches`}
                         </div>
                       </div>
@@ -188,37 +188,37 @@ export function Sidebar({
       </div>
 
       {/* Sidebar Footer with Profile & Sign Out */}
-      <div className="border-t border-white/8 px-4 py-3 bg-[#0a0a0a]">
+      <div className="border-t border-white/8 px-3 py-2.5 bg-[#0a0a0a]">
         <div className={cn(
           "flex items-center gap-2",
           isCollapsed ? "flex-col justify-center" : "justify-between"
         )}>
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-7 w-7 rounded-full bg-[#18181b] border border-white/10 flex items-center justify-center text-[10px] font-bold text-white uppercase shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-6 w-6 rounded-full bg-[#18181b] border border-white/10 flex items-center justify-center text-[9px] font-bold text-white uppercase shrink-0">
               {initials}
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
                 <div className="text-[11px] font-medium text-white truncate">{userName}</div>
-                <div className="text-[9px] text-slate-500 mt-0.5 truncate font-normal">Mount Sinai Hospital</div>
+                <div className="text-[9px] text-slate-500 truncate font-normal">Mount Sinai Hospital</div>
               </div>
             )}
           </div>
           {!isCollapsed ? (
             <button
               onClick={onLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 hover:border-white/20 bg-transparent text-[10px] font-medium text-slate-400 hover:text-white transition-all duration-200 shrink-0 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/10 hover:border-white/20 bg-transparent text-[9px] font-medium text-slate-400 hover:text-white transition-all duration-200 shrink-0 cursor-pointer"
             >
-              <LogOut className="h-3 w-3" />
+              <LogOut className="h-2.5 w-2.5" />
               <span>Sign Out</span>
             </button>
           ) : (
             <button
               onClick={onLogout}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 hover:border-white/20 text-slate-400 hover:text-white transition-all duration-200 cursor-pointer"
+              className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 hover:border-white/20 text-slate-400 hover:text-white transition-all duration-200 cursor-pointer"
               title="Sign Out"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-3 w-3" />
             </button>
           )}
         </div>

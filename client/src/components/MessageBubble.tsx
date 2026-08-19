@@ -40,11 +40,11 @@ export function MessageBubble({ message, onSuggestion }: Props) {
   }
 
   return (
-    <div className="flex items-start gap-3.5">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-sm">
+    <div className="flex items-start gap-3">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-xs">
         C
       </div>
-      <div className="flex-1 min-w-0 space-y-5">
+      <div className="flex-1 min-w-0 space-y-3.5">
 
         {message.workflowSteps && message.workflowSteps.length > 0 && (
           <AgentWorkflowPanel
@@ -58,9 +58,9 @@ export function MessageBubble({ message, onSuggestion }: Props) {
         {message.role === "assistant" && message.responseMode === "executive" ? (
           <ExecutiveSummaryCard message={message} />
         ) : (
-          <div className="editorial-card px-6 py-5 border border-white/8 relative overflow-hidden">
+          <div className="editorial-card px-4 sm:px-5 py-4 border border-white/8 relative overflow-hidden">
             <div className="prose-research max-w-none text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{sanitizeReportMarkdown(message.content)}</ReactMarkdown>
             </div>
           </div>
         )}
@@ -148,4 +148,30 @@ function Section({ title, count, children }: { title: string; count: number; chi
       {children}
     </div>
   );
+}
+
+function sanitizeReportMarkdown(content: string = ""): string {
+  if (!content) return "";
+
+  // 1. Fix multiline eligibility breaking out of table rows
+  let cleaned = content.replace(
+    /\|\s*\*{0,2}Eligibility\*{0,2}\s*\|\s*\n([\s\S]*?)(?:\|\|\s*Registry\s*\|\s*(\[.*?\]\(.*?\)|https?:\/\/[^\s|]+)\s*\||\|\s*\*{0,2}Registry\*{0,2}\s*\|\s*(\[.*?\]\(.*?\)|https?:\/\/[^\s|]+)\s*\|)/gi,
+    (_, criteria, reg1, reg2) => {
+      const reg = reg1 || reg2 || "";
+      return `| **Registry** | ${reg} |\n\n**Key Eligibility Criteria:**\n${criteria.trim()}`;
+    }
+  );
+
+  // 2. Fix broken double pipes like "|| Registry |"
+  cleaned = cleaned.replace(/\|\|\s*Registry\s*\|/gi, "| **Registry** |");
+
+  // 3. Fix unclosed eligibility rows before subsequent trial headings
+  cleaned = cleaned.replace(
+    /\|\s*\*{0,2}Eligibility\*{0,2}\s*\|\s*\n([\s\S]*?)(?=\n#{3,4}\s+|\n---|\n###)/gi,
+    (_, criteria) => {
+      return `\n\n**Key Eligibility Criteria:**\n${criteria.trim()}`;
+    }
+  );
+
+  return cleaned;
 }
