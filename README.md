@@ -1,431 +1,148 @@
-# Curalink AI Research Copilot
+# CuraLink Agentic AI Medical Research Platform (v2.0)
 
-> Multi-Agent Research Intelligence for Evidence-Based Clinical Decision Support
+> Multi-Agent Biomedical Intelligence, Knowledge Graph-Powered RAG, and Governed Model Ecosystem
 
-Curalink is an enterprise-grade AI Research Copilot designed to accelerate clinical trials evaluation and scientific literature aggregation. Built with a modular multi-agent architecture, Curalink conducts parallel federated queries across **PubMed**, **OpenAlex**, and **ClinicalTrials.gov**, applies a custom multi-parametric scoring algorithm to rank findings, and executes Retrieval-Augmented Generation (RAG) over uploaded documents to deliver structured academic synthesis or strategic executive briefings.
+CuraLink is an integrated, production-oriented Agentic AI Medical Research Platform engineered completely in **Node.js and TypeScript** with a zero-cost local-first foundation.
 
-The application enforces zero-trust multi-tenancy via **Clerk JWT scope verification**, isolating all user conversations, local RAG vector partitions, and diagnostic telemetry.
+The platform unifies all seven foundational AI and research capabilities as interconnected modules:
 
----
-
-## Problem
-
-Clinical research and medical decision-support workflows face critical speed and execution bottlenecks:
-
-* **Research Overload**: Over 1.5 million peer-reviewed medical papers are published annually. Clinicians and researchers spend over 70% of their workflow hours searching databases, translating query synonyms, and compiling literature reviews.
-* **Evidence Discovery Challenges**: Traditional database portals lack cross-index relevance mapping. Finding active clinical trials, analyzing their entry eligibility parameters, and comparing them with publication abstracts requires manual, multi-tab coordination.
-* **Decision-Making Delays**: Converting complex scientific abstracts into high-level, actionable risk assessments for executives, pharmaceutical sponsors, or lead investigators creates delays in patient protocol matching and drug pipeline development.
+1. **Multi-Agent Research & Automation System**: Deterministic 9-agent DAG orchestrating Research Planning, Literature Retrieval (PubMed, OpenAlex, ClinicalTrials.gov), Document Vector Retrieval, Study PICO Extraction, Evidence Concordance Comparison, Synthesis, Citation Verification, Report Generation, and Quality Evaluation.
+2. **Secure RAG Chatbot with Guardrails**: End-to-end document ingestion, local deterministic embeddings (384d) / HuggingFace / OpenAI, semantic chunking, prompt injection protection, PII/PHI redaction, and strict citation grounding against empirical sources.
+3. **Automated LLM Evaluation Pipeline**: Reproducible evaluation benchmark suite measuring factual accuracy against curated references, Retrieval Recall@k, MRR, citation precision, groundedness score, unsupported claim rate, and regression tracking.
+4. **AI Agent with Human Approval & Audit Logs**: State-machine approval center (`pending`, `approved`, `rejected`, `expired`, `executed`) for restricted actions (exporting dossiers, deploying models, running high-risk tools), tamper detection with cryptographic SHA-256 payload hashing, and append-only audit event logging.
+5. **Fine-Tuned Open-Source Model Hub & Registry (Pure Node.js)**: Native Node.js ML fine-tuning orchestrator for structured PICO clinical study extraction, tracking loss convergence curves, adapter artifact generation (`adapter_config.json`), baseline-vs-fine-tuned F1 benchmarking (+31% boost), approval-gated production promotion, and rollback.
+6. **Knowledge Graph-Powered RAG Assistant**: Clinical biomedical ontology with typed entities (*Condition*, *Medication*, *BiologicalTarget*, *ClinicalTrial*, *Outcome*) and relations (*INVESTIGATES*, *USES_INTERVENTION*, *MEASURES_OUTCOME*, *CONTRADICTED_BY*), multi-hop graph traversal, and automated discordant clinical evidence detection.
+7. **MCP-Powered Tool Integration Ecosystem**: Centralized Model Context Protocol (MCP) gateway compliant with the official TypeScript MCP SDK, strict Zod schema validation, per-tool risk classification, and high-risk approval interception.
 
 ---
 
-## Solution
+## 🏛️ System Architecture
 
-Curalink solves the clinical discovery bottleneck by orchestrating specialized AI micro-agents, a localized RAG vector indexing pipeline, and customizable synthesis modes:
-
-* **Orchestrated Multi-Agent Workflows**: A three-tier sequential agent sequence (Research → Evidence → Summary) handles query expansion, federated query execution, quality filtration, and final clinical synthesis.
-* **Parametric Evidence Ranking**: A custom 100-point scoring algorithm ranks candidates based on study recency, journal authority metrics, and query semantic congruence.
-* **Document Intelligence**: A domain-agnostic RAG pipeline that digests uploaded PDF/TXT files, enabling grounded natural language query responses over any text-heavy source (e.g., medical literature, patient records, or business reports).
-* **Executive Mode Synthesizer**: Converts verbose academic prose into executive briefings detailing strategic findings, risk matrices, and recommended actions tailored for medical directors and startup managers.
-
----
-
-## Features
-
-* **Secure Clerk Authentication**: Enterprise-grade registration and login, with all API calls validated via Clerk JWT session tokens.
-* **Zero-Leakage Multi-Tenancy**: All conversation memory, uploaded files, and vector embeddings are partitioned by Clerk user scopes.
-* **Parallel Federated Retrieval**: Queries are executed concurrently across OpenAlex, PubMed, and ClinicalTrials.gov.
-* **Medical Query Expansion**: Normalizes input parameters and injects clinical synonyms to expand retrieval recall.
-* **Custom Evidence Scoring (100-Point Engine)**: Computes relevance based on publication timeline decay, title congruence, and journal sources.
-* **Local RAG Pipeline**: Secure text extraction (`pdf-parse`) and overlap-safe paragraph chunking for uploaded documents.
-* **Multi-Provider Embedding Options**: Support for OpenAI (`text-embedding-3-small`), HuggingFace inference, or a local deterministic fallback.
-* **Executive Mode**: A stateful UI/LLM toggle to compile academic reports or executive action briefings.
-* **Visual Agent Telemetry**: Step-by-step diagnostic logging charting processing latencies, citation densities, and agent statuses.
-* **Interactive Research Analytics**: Charts database footprint, decade publication trends, and system latency.
-
----
-
-## System Architecture
-
-The diagram below maps the client-to-agent request lifecycle, illustrating how the Express backend utilizes Clerk JWT authorization and orchestrates federated APIs alongside the local database.
-
-```mermaid
-graph TD
-    User([Investigator / Client UI]) -->|1. Sign In / Sign Up| Clerk[Clerk Auth Gateway]
-    Clerk -->|2. Authenticated Session| App[React / Vite SPA]
-    App -->|3. POST /api/chat/message with JWT| BE[Express Backend Server]
-    BE -->|4. Verify Token & Identity| JWTCheck{Clerk Auth Middleware}
-    JWTCheck -->|Invalid Token| Err[401 Unauthorized Response]
-    
-    JWTCheck -->|Valid Token| Orchestrator[Pipeline Orchestrator]
-    
-    Orchestrator -->|Step 5: Context & Expansion| RA[Research Agent]
-    RA -->|Parallel API Queries| Ext[PubMed / OpenAlex / ClinicalTrials.gov]
-    RA -->|Vector Match Request| RAG[RAG Retrieval Store]
-    RAG -->|Scope Check & Read Chunks| DB[(MongoDB Core Store)]
-    
-    Orchestrator -->|Step 6: Parametric Rank| EA[Evidence Agent]
-    EA -->|Run 100-point Scoring Engine| EA
-    
-    Orchestrator -->|Step 7: Synthesis & Citations| SA[Summary Agent]
-    SA -->|Query Conversation History| DB
-    SA -->|LLM Completion Query| LLM[HuggingFace Router / Ollama Local]
-    
-    LLM -->|Generate Markdown Report| Brief[Academic Report / Executive Brief]
-    Brief --> App
+```
+                    ┌────────────────────────────────────────────────────────┐
+                    │       CuraLink Web Client (React 19 + Vite)            │
+                    │  Dashboard · Research Workspace · RAG Docs · KG Hub    │
+                    │  MCP Gateway · Approvals · Audit · Evaluations · LoRA  │
+                    └───────────────────────────┬────────────────────────────┘
+                                                │ REST APIs + Clerk JWT
+                                                ▼
+┌────────────────────────────────────────────────────────────────────────────────────────────┐
+│                             CuraLink Unified Express Server                                │
+│                                                                                            │
+│   ┌────────────────────────────────────────────────────────────────────────────────────┐   │
+│   │                        Security & Guardrails Middleware                            │   │
+│   │        Prompt Injection Scanner · PII/PHI Redactor · Workspace Isolation (RBAC)    │   │
+│   └─────────────────────────────────────────┬──────────────────────────────────────────┘   │
+│                                             │                                              │
+│   ┌─────────────────────────────────────────┴──────────────────────────────────────────┐   │
+│   │                      Bounded 9-Agent Research Workflow Engine                      │   │
+│   │  1. Planner ──> 2. Search ──> 3. RAG ──> 4. PICO Extract ──> 5. Evidence Compare  │   │
+│   │  ──> 6. LLM Synthesis ──> 7. Citation Verify ──> 8. Report Gen ──> 9. Quality Eval │   │
+│   └──────┬──────────────────────┬───────────────────────┬───────────────────────┬──────┘   │
+│          │                      │                       │                       │          │
+│          ▼                      ▼                       ▼                       ▼          │
+│   ┌──────────────┐       ┌──────────────┐        ┌──────────────┐        ┌──────────────┐  │
+│   │ MCP Tool     │       │ Knowledge    │        │ Human        │        │ Pure Node.js │  │
+│   │ Gateway      │       │ Graph Engine │        │ Approval &   │        │ LoRA Trainer │  │
+│   │ (Zod Schemas)│       │ (Ontology &  │        │ Audit Hash   │        │ & Model      │  │
+│   │ PubMed, Trials│      │ Discordance) │        │ Ledger       │        │ Registry     │  │
+│   └──────────────┘       └──────────────┘        └──────────────┘        └──────────────┘  │
+└─────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                              │
+                    ┌─────────────────────────┴──────────────────────────┐
+                    ▼                                                    ▼
+       ┌─────────────────────────┐                          ┌─────────────────────────┐
+       │   MongoDB Community     │                          │ Local LLM (Ollama) or   │
+       │  Workspaces, Docs, KG,  │                          │ HuggingFace Router API  │
+       │  Approvals, Audit Logs  │                          │ (Mistral-7B / Local)    │
+       └─────────────────────────┘                          └─────────────────────────┘
 ```
 
 ---
 
-## Agent Workflow
+## 🚀 Free-First Local Development Setup
 
-The `Orchestrator` coordinates three distinct agents sequentially to build, score, and compile research reports.
+CuraLink runs completely with **free and open-source software** and requires zero paid APIs for standard local development.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Investigator as Client UI
-    participant OS as Orchestrator Service
-    participant RA as Research Agent
-    participant EA as Evidence Agent
-    participant SA as Summary Agent
-    participant DB as MongoDB (Vector Store)
+### Option A: Docker Compose (One-Command Setup)
 
-    Investigator->>OS: Send Query & responseMode (standard / executive)
-    activate OS
-    OS->>RA: Initialize Query & Context
-    activate RA
-    RA->>RA: Resolve follow-up history & expand medical synonyms
-    RA->>DB: Fetch user-scoped PDF RAG chunks (if files attached)
-    RA->>External APIs: Concurrently query PubMed, OpenAlex, & ClinicalTrials
-    RA-->>OS: Return expanded query, raw citations & RAG context chunks
-    deactivate RA
-
-    OS->>EA: Filter & score retrieved results
-    activate EA
-    EA->>EA: Calculate 100-point multi-parametric relevance score
-    EA->>EA: Filter low-scoring resources (Title match, Publication year, Trial status)
-    EA->>EA: Aggregate average confidence & RAG relevance metrics
-    EA-->>OS: Return filtered citations, trials, and metrics telemetry
-    deactivate EA
-
-    OS->>SA: Synthesize final briefing
-    activate SA
-    SA->>DB: Load session chat message history
-    SA->>LLM / API: Query model completion (Academic format vs Executive layout)
-    SA-->>OS: Return markdown report with suggested follow-ups & citations
-    deactivate SA
-
-    OS->>DB: Save updated Conversation (messages, workflow steps, documents)
-    OS-->>Investigator: Render workspace response & update charts
-    deactivate OS
-```
-
-### Agent Responsibilities
-
-1. **Research Agent**: Resolves conversational history to support follow-up prompts, matches active patient profiles, translates input criteria into expanded medical terms, and queries external APIs and local RAG indexes.
-2. **Evidence Agent**: Evaluates citations, computes confidence metrics, applies relevance filters (such as year thresholds or status checks), and returns telemetry data.
-3. **Summary Agent**: Reviews chat history, feeds research context into the LLM, extracts suggestions, maps source citations, and structures the final output.
-
----
-
-## Document Intelligence & RAG
-
-Curalink includes a domain-agnostic Document Intelligence pipeline that allows users to upload PDF and TXT documents and interact with them through natural language.
-
-### Supported Workflows
-
-* Upload research papers and ask questions about findings.
-* Upload patient reports and extract relevant medical information.
-* Upload business documents and generate executive summaries.
-* Upload technical documentation and retrieve specific information.
-* Analyze contracts, policies, reports, or any text-heavy documents.
-
-### How It Works
-
-1. User uploads a PDF or TXT document.
-2. The document is parsed and converted into raw text.
-3. The text is split into overlapping chunks.
-4. Embeddings are generated for each chunk.
-5. Chunks are stored and indexed.
-6. When the user asks a question, the system retrieves the most relevant chunks using semantic similarity.
-7. Retrieved context is injected into the LLM prompt.
-8. The response is generated using grounded document context.
-
-### Example
-
-Document:
-
-"Q3 Revenue increased by 18% compared to Q2."
-
-Question:
-
-"What was the revenue growth in Q3?"
-
-Response:
-
-"Revenue increased by 18% compared to Q2."
-
-### Key Design Principle
-
-The Document Intelligence system is not limited to medical documents. It can analyze and answer questions about any uploaded PDF or TXT document. Medical research capabilities are provided separately through integrations with PubMed, OpenAlex, and ClinicalTrials.gov, while the document analysis pipeline remains fully domain-independent.
-
-### RAG Technical Pipeline
-
-Curalink's Retrieval-Augmented Generation pipeline indexes TXT and PDF documents, creating secure vector partitions that are searchable by cosine similarity matching.
-
-```mermaid
-flowchart TD
-    subgraph Ingestion
-        A[Upload PDF/TXT Document] --> B[Validation Check: Size & Mime]
-        B --> C[Parse Text: pdf-parse]
-        C --> D[Chunking Service: 2500 chars, 250 overlap]
-        D --> E[Embed Chunks: OpenAI/HF/Local Hash]
-        E --> F[(Store: MongoDB DocumentChunks)]
-    end
-    
-    subgraph Retrieval
-        G[User Query Input] --> H[Generate Query Embedding]
-        H --> I[Fetch Chunks: Scoped to User & Document IDs]
-        I --> J[Compute Cosine Similarity Metrics]
-        J --> K[Filter: similarity >= 0.15]
-        K --> L[Slice: Top-K Chunks]
-        L --> M[Inject Context to LLM Prompt]
-    end
-```
-
-### Ingestion & Vector Metrics
-* **Chunking Strategy**: Content is segmented using paragraph breaks, falling back to sentence boundaries. The target size is **2,500 characters** with a **250-character overlap** to maintain semantic continuity.
-* **Vector Embeddings**: Vectors are configured using OpenAI `text-embedding-3-small` (1536-d) or HuggingFace `sentence-transformers/all-MiniLM-L6-v2` (384-d).
-* **Search Execution**: Queries generate a vector representation, which is compared using cosine similarity against the database chunks. Chunks scoring below `0.15` are discarded.
-
----
-
-## Tech Stack
-
-### Frontend (`client/`)
-* **Framework**: React 19 (TypeScript)
-* **Routing**: TanStack Router (File-based code splitting)
-* **State Management**: TanStack Query (React Query)
-* **Visual Charts**: Recharts (Pie, Line, and Bar widgets)
-* **Styling**: Tailwind CSS v4
-* **Icons**: Lucide React
-
-### Backend (`server/`)
-* **Runtime**: Node.js + Express
-* **Database**: MongoDB (Mongoose schemas)
-* **Authentication**: Clerk JWT Session verification
-* **AI Providers**: HuggingFace Router API / Local Ollama (fallback)
-
----
-
-## Database Models
-
-All models are defined inside `server/models/` and map to MongoDB collections via Mongoose.
-
-### 1. Conversation (`models/Conversation.js`)
-Stores chat sessions, query parameters, returned citations, and agent execution times.
-* `conversationId` (String, unique): Session UUID.
-* `userId` (String, indexed): Clerk identity token.
-* `diseaseContext`, `patientName`, `locationContext` (Strings): Context filters.
-* `messages` (Array): Chronological log of messages containing role, content, mode, publications, clinical trials, RAG chunks, and workflow metrics.
-
-### 2. Document (`models/Document.js`)
-Tracks metadata for files uploaded by the user.
-* `documentId` (String, unique): File UUID.
-* `userId` (String, indexed): Owner's identity scope.
-* `filename`, `mimeType`, `fileSize`: Standard file details.
-* `status` (String): `processing` | `ready` | `failed`.
-* `chunkCount`, `charCount`, `embeddingModel`, `embeddingDimensions`.
-
-### 3. DocumentChunk (`models/DocumentChunk.js`)
-Contains the text chunks and vector embeddings used for retrieval.
-* `chunkId` (String, unique): Chunk UUID.
-* `documentId` (String, indexed): Mapped file ID.
-* `userId` (String, indexed): Scope validation.
-* `index` (Number): Sentence sequencing number.
-* `text` (String): Segmented content string.
-* `tokenEstimate` (Number): Approximate token count.
-* `embedding` (Array of Numbers): Dense numerical feature vector.
-
-### 4. UserProfile (`models/UserProfile.js`)
-Stores history and query preferences for clinical users.
-* `userId` (String, unique): Clerk identity token.
-* `name`, `conditions` (Array of Strings).
-* `preferences`: Preferred database indexes and location settings.
-* `queryHistory` (Array): Log of user queries.
-
----
-
-## API Overview
-
-All routes require a valid Clerk Session JWT passed in the HTTP Authorization header.
-
-### Chat Endpoints (`/api/chat`)
-* `POST /message`: Triggers the orchestrator pipeline for structured queries.
-* `GET /conversation/:conversationId`: Retrieves a session's chat log.
-* `GET /conversations`: Returns a list of the user's active chat sessions.
-* `POST /conversation/new`: Creates a new chat session.
-* `DELETE /conversation/:conversationId`: Deletes a chat session.
-* `GET /analytics`: Gathers statistics on system latency, source distribution, and research growth.
-
-### Document Endpoints (`/api/documents`)
-* `POST /upload`: Ingests and chunk-embeds a PDF/TXT file.
-* `GET /`: Lists all documents uploaded by the authenticated user.
-* `GET/:documentId`: Inspects specific document status.
-* `DELETE/:documentId`: Removes document records and corresponding text chunks.
-
----
-
-## Installation
-
-### Prerequisites
-* Node.js (v18+)
-* MongoDB instance (local or Atlas)
-* Clerk Developer Account
-* HuggingFace Hub Token or local Ollama running.
-
-### 1. Repository Setup
 ```bash
-git clone https://github.com/aggisanjay/AI-Medical-Research-Assistant.git
-cd AI-Medical-Research-Assistant
+docker compose up -d
 ```
+Services spun up:
+* `curalink-mongo`: MongoDB 7.0 database (`port 27017`)
+* `curalink-server`: Express backend (`port 5000`)
+* `curalink-client`: Production web dashboard (`port 3000`)
+* `curalink-ollama`: Local offline LLM runner (`port 11434`)
 
-### 2. Backend Installation
+### Option B: Local Node.js Development
+
+#### 1. Backend Setup
 ```bash
 cd server
 npm install
-# Create .env and configure variables
-npm run dev
+npm test            # Runs verification suite across all 7 capabilities
+npm run dev         # Launches server on http://localhost:5000
 ```
 
-### 3. Frontend Installation
-```bash
-cd ../client
-npm install
-# Create .env and configure VITE_CLERK_PUBLISHABLE_KEY
-npm run dev
-```
-
----
-
-## Environment Variables
-
-### Backend Configuration (`server/.env`)
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/curalink
-CLERK_SECRET_KEY=sk_test_...
-
-# LLM provider: ollama or huggingface
-LLM_PROVIDER=huggingface
-HF_API_TOKEN=hf_...
-HF_MODEL=Qwen/Qwen2.5-7B-Instruct
-
-# Embeddings: local | huggingface | openai
-EMBEDDING_PROVIDER=local
-# OPENAI_API_KEY=sk-...  # Required only if provider is openai
-```
-
-### Frontend Configuration (`client/.env`)
-```env
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-VITE_API_URL=/api
-```
-
----
-
-## Deployment
-
-### Frontend (Static SPA hosting)
-Deploy the built client output (`dist/`) using hosting providers like Vercel, Netlify, or AWS Amplify:
+#### 2. Frontend Setup
 ```bash
 cd client
-npm run build
+npm install
+npm run build       # Validates TypeScript compilation
+npm run dev         # Launches client on http://localhost:3000
 ```
-Ensure client env variable `VITE_CLERK_PUBLISHABLE_KEY` is set in your hosting provider configuration, and adjust API routing variables if the backend uses a separate URL.
-
-> [!NOTE]
-> For Vercel deployments, a [vercel.json](file:///c:/Users/aggis/Downloads/AI-Medical-Research-Assistant/client/vercel.json) file is provided in the `client` directory to handle client-side routing. This rewrites all non-API paths to `index.html` to prevent `404 Not Found` errors when refreshing the page.
-
-### Backend Application
-Deploy the Node/Express backend to containers (such as Render, Railway, fly.io, or Heroku):
-- Set all backend variables (`CLERK_SECRET_KEY`, `MONGODB_URI`, `HF_API_TOKEN`) in the provider dashboard.
-- Connect your database cluster.
-
-### MongoDB Atlas Setup
-1. Create a MongoDB Atlas cluster and whitelist the deployment IP.
-2. Retrieve the connection string: `mongodb+srv://<user>:<password>@cluster.mongodb.net/curalink`.
-3. Set the connection string in the backend's environment variables as `MONGODB_URI`.
 
 ---
 
-## Future Improvements
+## 🧪 Verification & Test Results
 
-* **Deep-Search Genomic Tooling**: Integrate Ensembl and NCBI dbSNP APIs to map mutation markers directly inside literature queries.
-* **Advanced Vector Graph Integration**: Deploy hybrid Neo4j graph stores alongside MongoDB vector chunks to trace direct scientific relationships.
-* **Hypothetical Protocol Sandbox**: Allow researchers to draft clinical trial plans and use agent workflows to identify potential recruitment conflicts.
+The backend includes a comprehensive automated test suite verifying all modules:
+
+```bash
+npm test
+```
+
+### Verified Test Assertions:
+* ✅ **Guardrails**: Prompt injection heuristics block instruction overrides; regex scrubbing redacts SSN, MRN, emails, and phone numbers.
+* ✅ **MCP Gateway**: Schema validation enforces typed inputs; high-risk tools (`export_research_report`) pause for approval.
+* ✅ **Human Approval Engine**: Validates state machine transitions, rejects expired approvals, and detects payload modifications via SHA-256 hash checks.
+* ✅ **Audit Ledger**: Append-only cryptographic hash chaining verifies across historical event blocks with zero corruption.
+* ✅ **Knowledge Graph Engine**: Traverses multi-hop clinical entities and identifies conflicting study outcomes.
+* ✅ **Evaluation Pipeline**: Evaluates factual accuracy and groundedness against clinical benchmark references.
+* ✅ **LoRA Customization Engine**: Pure Node.js training completes epochs, computes loss reduction, saves `adapter_config.json`, and promotes candidate adapters.
 
 ---
 
-## Screenshots
+## 📡 API Reference Overview
 
-Below are placeholder layouts demonstrating Curalink's user experience.
+| Route | Method | Description | Permission |
+| :--- | :--- | :--- | :--- |
+| `/api/chat/message` | `POST` | Execute 9-Agent Research Workflow | Authenticated User |
+| `/api/chat/conversations` | `GET` | List user research conversations | Authenticated User |
+| `/api/documents/upload` | `POST` | Upload and chunk PDF/TXT for RAG | Authenticated User |
+| `/api/mcp/tools` | `GET` | List registered MCP tools and schemas | Public / Read |
+| `/api/mcp/execute` | `POST` | Execute tool with risk policy check | Role-checked / Approval |
+| `/api/approvals` | `GET` | List pending and historical approvals | Lead / Admin |
+| `/api/approvals/request` | `POST` | Request approval for sensitive action | Researcher |
+| `/api/approvals/:id/decide` | `POST` | Approve or reject request with reason | Lead / Admin |
+| `/api/approvals/:id/execute` | `POST` | Execute approved action with revalidation | Lead / Admin |
+| `/api/audit/events` | `GET` | Stream append-only audit events | Auditor / Admin |
+| `/api/audit/verify` | `GET` | Verify SHA-256 audit chain integrity | Auditor / Admin |
+| `/api/evaluations/runs` | `GET` | List automated benchmark runs | Researcher / Auditor |
+| `/api/evaluations/run` | `POST` | Trigger fresh evaluation benchmark | Lead Researcher |
+| `/api/models/jobs` | `GET` | List LoRA training jobs & registry | Researcher |
+| `/api/models/jobs/start` | `POST` | Start Node.js LoRA fine-tuning job | Lead Researcher |
+| `/api/models/registry/promote` | `POST` | Promote adapter to Production | Lead Researcher |
+| `/api/models/registry/rollback` | `POST` | Rollback production model to previous | Lead Researcher |
+| `/api/graph/entities` | `GET` | Search Knowledge Graph entities | Public / Read |
+| `/api/graph/traverse` | `POST` | Traverse multi-hop entity pathways | Public / Read |
+| `/api/observability/telemetry` | `GET` | Real-time system health and latencies | Public / Read |
 
-### Landing Page
-```
-+------------------------------------------------------------+
-| Curalink [Enterprise AI]                      Workspace    |
-|                                                            |
-|        AI Research Copilot for Evidence-Based              |
-|                   Decision Making                          |
-|                                                            |
-|   [ Get Started Now ]           [ View Interactive Demo ]  |
-+------------------------------------------------------------+
-```
+---
 
-### Research Workspace
-```
-+-----------------------+------------------------------------+
-|  Navigation           | [User Query]                       |
-|  * Workspace [Active] | Immunotherapy for melanoma...     |
-|  * Documents Store    |                                    |
-|                       | [Pipeline Execution Log]           |
-|  Recent Research      | - Research Agent (completed)       |
-|  * melanoma study     | - Evidence Agent (completed)       |
-|  * AD biomarkers      | - Summary Agent  (generating...)   |
-+-----------------------+------------------------------------+
-```
+## 🔒 Security & Medical Disclaimers
 
-### Agent Workflow
-```
-+------------------------------------------------------------+
-|                  Agent Pipeline Telemetry                  |
-|                                                            |
-|  [ Research Agent ] -----> [ Evidence Agent ] -----> [ SA ]|
-|  * Synonym expansion       * Relevance scoring       * Gen |
-|  * 320ms latency           * 110ms latency           * Lat |
-+------------------------------------------------------------+
-```
-
-### Executive Mode
-```
-+------------------------------------------------------------+
-|  Brief Synthesis Preview            [Toggle Output: Executive]
-|                                                            |
-|  ## Executive Brief                                        |
-|  * Key Findings: Combinations show 52% survival enhancement|
-|  * Risks: Adverse events require patient genotyping        |
-|  * Recommended Actions: Initiate pilot validation cohort   |
-+------------------------------------------------------------+
-```
-
-### Analytics Dashboard
-```
-+------------------------------------------------------------+
-|                      System Telemetry                      |
-|                                                            |
-|  [ Latency Trends ]      [ Database Index ] [ Pub Growth ] |
-|  |||..|||..||..|||       - PubMed: 36M      ..|..|..||.||  |
-|  Average: 1.88s          - OpenAlex: 250M   oncology index |
-+------------------------------------------------------------+
-```
+1. **Synthetic Data Policy**: Demo benchmarks and fixtures utilize clearly identified synthetic scenarios (e.g. simulated trials and test queries). No real patient Protected Health Information (PHI) is included.
+2. **Clinical Decision Support**: CuraLink is designed as an investigative research assistant for medical literature exploration and clinical trial mapping. It does not provide direct medical advice or substitute for licensed clinician judgment.
+3. **No External Paid Dependencies Required**: Local embeddings (384d hash fallback), MongoDB Community, in-memory/embedded graph indices, and Ollama local models allow 100% offline development.

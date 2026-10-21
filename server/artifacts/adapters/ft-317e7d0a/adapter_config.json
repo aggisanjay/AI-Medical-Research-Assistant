@@ -1,0 +1,15 @@
+{
+  "base_model_name_or_path": "mistralai/Mistral-7B-Instruct-v0.3",
+  "lora_alpha": 16,
+  "lora_dropout": 0.05,
+  "r": 8,
+  "target_modules": [
+    "q_proj",
+    "v_proj",
+    "k_proj"
+  ],
+  "task_type": "CAUSAL_LM",
+  "peft_type": "LORA",
+  "trained_at": "2026-10-21T20:30:31.789Z",
+  "framework": "curalink-node-lora"
+}

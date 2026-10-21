@@ -48,6 +48,16 @@ const messageSchema = new mongoose.Schema({
     score: Number,
     excerpt: String
   }],
+  tokenCost: {
+    promptTokens: Number,
+    completionTokens: Number,
+    totalTokens: Number,
+    costUSD: Number,
+    costFormatted: String,
+    model: String,
+    provider: String,
+    savingsUSD: Number
+  },
   timestamp: { type: Date, default: Date.now }
 });
 

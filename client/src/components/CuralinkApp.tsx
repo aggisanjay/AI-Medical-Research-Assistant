@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { 
   Sparkles, FlaskConical, BookOpen, 
   Globe, Bell, HelpCircle, 
-  ShieldCheck, AlertCircle
+  ShieldCheck, AlertCircle, Coins
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { StructuredInput } from "@/components/StructuredInput";
@@ -18,10 +18,16 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-// Import view components
 import { DashboardView } from "@/components/DashboardView";
 import { SettingsView } from "@/components/SettingsView";
 import { DocumentsView } from "@/components/DocumentsView";
+import { KnowledgeGraphView } from "@/components/KnowledgeGraphView";
+import { McpToolsView } from "@/components/McpToolsView";
+import { ApprovalsView } from "@/components/ApprovalsView";
+import { AuditView } from "@/components/AuditView";
+import { EvaluationView } from "@/components/EvaluationView";
+import { FineTuningView } from "@/components/FineTuningView";
+import { ObservabilityView } from "@/components/ObservabilityView";
 import { useAuth, useUser, useClerk, Show, UserButton } from "@clerk/react";
 
 export function CuralinkApp() {
@@ -45,7 +51,27 @@ export function CuralinkApp() {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
   const [documents, setDocuments] = useState<DocumentSummary[]>([]);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [realtimeTokens, setRealtimeTokens] = useState<number>(0);
+  const [realtimeCost, setRealtimeCost] = useState<string>("$0.00000");
   const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // Sync real-time token and cost telemetry from backend
+  const syncTelemetry = async () => {
+    try {
+      const res = await api.getObservabilityTelemetry();
+      if (res?.telemetry?.tokenAndCostAnalytics) {
+        const stats = res.telemetry.tokenAndCostAnalytics;
+        setRealtimeTokens(stats.totalTokensConsumed || 0);
+        setRealtimeCost(stats.costFormatted || "$0.00000");
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    syncTelemetry();
+    const interval = setInterval(syncTelemetry, 6000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Attach Clerk session token to all API requests
   useEffect(() => {
@@ -257,6 +283,10 @@ export function CuralinkApp() {
         setConversationId(res.conversationId);
       }
       const data = res.data;
+      if (data.tokenCost && !data.tokenCost.isFallback) {
+        setRealtimeTokens((prev) => prev + (data.tokenCost?.totalTokens || 0));
+        syncTelemetry();
+      }
       setWorkflowSteps(data.workflowSteps || []);
       setMessages((prev) => [
         ...prev,
@@ -266,6 +296,7 @@ export function CuralinkApp() {
           responseMode: payload.responseMode,
           suggestedQuestions: data.suggestedQuestions,
           workflowSteps: data.workflowSteps,
+          tokenCost: data.tokenCost,
           publications: data.publications?.map((p) => ({
             ...p,
             relevanceScore: p.relevanceScore ?? (p as { totalScore?: number }).totalScore,
@@ -308,6 +339,20 @@ export function CuralinkApp() {
         return renderChatWorkspace();
       case "documents":
         return <DocumentsView onDocumentsChange={fetchDocuments} />;
+      case "knowledge-graph":
+        return <KnowledgeGraphView />;
+      case "mcp-tools":
+        return <McpToolsView />;
+      case "approvals":
+        return <ApprovalsView />;
+      case "audit-logs":
+        return <AuditView />;
+      case "evaluations":
+        return <EvaluationView />;
+      case "fine-tuning":
+        return <FineTuningView />;
+      case "observability":
+        return <ObservabilityView />;
       case "settings":
         return <SettingsView />;
       default:
@@ -467,6 +512,19 @@ export function CuralinkApp() {
                 <Pill icon={FlaskConical} label="ClinicalTrials.gov" />
               </div>
             )}
+
+            {/* Real-time Token & Cost Live Ticker */}
+            <div 
+              onClick={() => setActiveTab("observability")}
+              title="Real-time Token & Cost Tracker — Click to view Observability metrics"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-mono text-emerald-400 hover:bg-emerald-500/15 cursor-pointer transition-colors"
+            >
+              <Coins className="h-3 w-3 text-emerald-400 shrink-0" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="font-semibold text-white">{realtimeCost}</span>
+              <span className="text-slate-500 hidden sm:inline">|</span>
+              <span className="text-emerald-300/80 hidden sm:inline">{realtimeTokens.toLocaleString()} tok</span>
+            </div>
 
             <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0a0a0a] border border-white/8 text-[9px] text-slate-300 font-medium">
               <ShieldCheck className="h-3 w-3 text-slate-400" />

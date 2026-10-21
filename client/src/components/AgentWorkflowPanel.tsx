@@ -229,11 +229,18 @@ export function AgentWorkflowPanel({
                     </span>
                   )}
                 </div>
-                {step.durationMs > 0 && (
-                  <span className="text-[10px] text-slate-400 font-mono shrink-0">
-                    {formatDuration(step.durationMs)}
-                  </span>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {step.metadata?.tokens ? (
+                    <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                      {Number(step.metadata.tokens).toLocaleString()} tok
+                    </span>
+                  ) : null}
+                  {step.durationMs > 0 && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {formatDuration(step.durationMs)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {config.description && (

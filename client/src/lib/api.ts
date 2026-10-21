@@ -63,8 +63,22 @@ export interface DocumentSummary {
   createdAt: string;
 }
 
+export interface TokenCost {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  costUSD: number;
+  costFormatted: string;
+  model: string;
+  provider: string;
+  savingsUSD?: number;
+  isFallback?: boolean;
+  fallbackReason?: string;
+}
+
 export interface ResearchResponse {
   response: string;
+  tokenCost?: TokenCost;
   suggestedQuestions?: string[];
   workflowSteps?: WorkflowStep[];
   publications?: Publication[];
@@ -77,6 +91,7 @@ export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   responseMode?: "standard" | "executive" | "document";
+  tokenCost?: TokenCost;
   structuredInput?: {
     patientName?: string;
     disease?: string;
@@ -191,4 +206,89 @@ export const api = {
 
   deleteDocument: (documentId: string) =>
     http<{ success: boolean }>(`/documents/${documentId}`, { method: "DELETE" }),
+
+  // ── MCP Tools Ecosystem ──
+  getMcpTools: () =>
+    http<{ success: boolean; count: number; tools: any[] }>("/mcp/tools"),
+  getMcpServers: () =>
+    http<{ success: boolean; count: number; servers: any[] }>("/mcp/servers"),
+  executeMcpTool: (toolName: string, args: Record<string, any>, approvalId?: string) =>
+    http<{ success: boolean; data: any }>("/mcp/execute", {
+      method: "POST",
+      body: JSON.stringify({ toolName, args, approvalId }),
+    }),
+
+  // ── Human Approval & Audit Logs ──
+  getApprovals: (status?: string) =>
+    http<{ success: boolean; count: number; data: any[] }>(
+      status ? `/approvals?status=${status}` : "/approvals",
+    ),
+  requestApproval: (payload: { actionType: string; title: string; description?: string; riskLevel?: string; payload: any }) =>
+    http<{ success: boolean; data: any }>("/approvals/request", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  decideApproval: (approvalId: string, decision: "approved" | "rejected", rejectionReason?: string) =>
+    http<{ success: boolean; data: any }>(`/approvals/${approvalId}/decide`, {
+      method: "POST",
+      body: JSON.stringify({ decision, rejectionReason }),
+    }),
+  executeApproval: (approvalId: string) =>
+    http<{ success: boolean; data: any }>(`/approvals/${approvalId}/execute`, {
+      method: "POST",
+    }),
+
+  getAuditLogs: (params?: { eventType?: string; severity?: string; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.eventType) query.set("eventType", params.eventType);
+    if (params?.severity) query.set("severity", params.severity);
+    if (params?.limit) query.set("limit", params.limit.toString());
+    return http<{ success: boolean; events: any[]; total: number }>(`/audit/events?${query.toString()}`);
+  },
+  verifyAuditIntegrity: () =>
+    http<{ success: boolean; valid: boolean; compromised: boolean; checkedCount: number; compromisedAtEventId?: string }>("/audit/verify"),
+
+  // ── Automated LLM Evaluation ──
+  getEvaluationRuns: () =>
+    http<{ success: boolean; count: number; data: any[] }>("/evaluations/runs"),
+  triggerEvaluationRun: (modelConfig?: any) =>
+    http<{ success: boolean; data: any }>("/evaluations/run", {
+      method: "POST",
+      body: JSON.stringify({ modelConfig }),
+    }),
+  compareEvaluationRuns: (runIdA: string, runIdB: string) =>
+    http<{ success: boolean; data: any }>(`/evaluations/compare?runIdA=${runIdA}&runIdB=${runIdB}`),
+
+  // ── LoRA Fine-Tuning & Model Registry ──
+  getFineTuningJobs: () =>
+    http<{ success: boolean; count: number; data: any[] }>("/models/jobs"),
+  startFineTuningJob: (params: { adapterName?: string; baseModel?: string; loraRank?: number; epochs?: number }) =>
+    http<{ success: boolean; data: any }>("/models/jobs/start", {
+      method: "POST",
+      body: JSON.stringify(params),
+    }),
+  promoteModelRegistry: (jobId: string, newStatus: string) =>
+    http<{ success: boolean; data: any }>("/models/registry/promote", {
+      method: "POST",
+      body: JSON.stringify({ jobId, newStatus }),
+    }),
+  rollbackModelRegistry: () =>
+    http<{ success: boolean; data: any }>("/models/registry/rollback", {
+      method: "POST",
+    }),
+
+  // ── Knowledge Graph ──
+  searchGraphEntities: (query?: string) =>
+    http<{ success: boolean; count: number; data: any[] }>(
+      query ? `/graph/entities?query=${encodeURIComponent(query)}` : "/graph/entities",
+    ),
+  traverseGraph: (entityIds: string[], maxDepth?: number) =>
+    http<{ success: boolean; data: { nodes: any[]; edges: any[]; contradictions: any[] } }>("/graph/traverse", {
+      method: "POST",
+      body: JSON.stringify({ entityIds, maxDepth }),
+    }),
+
+  // ── Observability & Telemetry ──
+  getObservabilityTelemetry: () =>
+    http<{ success: boolean; telemetry: any }>("/observability/telemetry"),
 };

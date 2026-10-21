@@ -373,7 +373,7 @@ export function DashboardView({
                     }}
                   >
                     <td className="py-3.5 font-medium text-white pr-3 max-w-[200px] truncate">
-                      {conv.disease || conv.patientName || "Untitled Investigation"}
+                      {conv.disease || conv.patientName || "Clinical Investigation"}
                     </td>
                     <td className="py-3.5 text-slate-500 font-mono text-[10px]">
                       {conv.conversationId.substring(0, 8)}...

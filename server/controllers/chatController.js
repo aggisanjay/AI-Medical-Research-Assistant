@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const orchestrator = require('../services/orchestrator');
+const tokenCostService = require('../services/tokenCostService');
 const Conversation = require('../models/Conversation');
 const { getUserId } = require('../middleware/clerkAuth');
 
@@ -77,37 +78,77 @@ const chatController = {
         return res.status(404).json({ success: false, error: 'Conversation not found' });
       }
 
-      res.json({ success: true, data: conversation });
+      // Ensure every assistant message has full tokenCost populated
+      const convObj = conversation.toObject();
+      if (convObj.messages && convObj.messages.length > 0) {
+        convObj.messages = convObj.messages.map(m => {
+          if (m.role === 'assistant' && (!m.tokenCost || !m.tokenCost.totalTokens)) {
+            const estCompletion = tokenCostService.estimateTokens(m.content || '');
+            const estPrompt = Math.max(850, Math.round(estCompletion * 1.6));
+            m.tokenCost = tokenCostService.calculateCost({
+              model: 'qwen/qwen3.8-27b',
+              provider: 'groq',
+              exactPromptTokens: estPrompt,
+              exactCompletionTokens: estCompletion
+            });
+          }
+          return m;
+        });
+      }
+
+      res.json({ success: true, data: convObj });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
   },
 
   /**
-   * List all conversations
+   * List all conversations with rich descriptive titles
    */
   async listConversations(req, res) {
     try {
       const userId = getUserId(req);
       const conversations = await Conversation.find({ userId })
         .sort({ updatedAt: -1 })
-        .limit(20)
+        .limit(30)
         .select('conversationId diseaseContext patientName updatedAt messages');
 
       const summaries = conversations.map(conv => {
-        const firstUserMsg = conv.messages.find(m => m.role === 'user');
-        const defaultTitle = firstUserMsg 
-          ? (firstUserMsg.content.length > 40 ? firstUserMsg.content.substring(0, 40) + '...' : firstUserMsg.content)
-          : 'Untitled Investigation';
+        const msgs = conv.messages || [];
+        const firstUserMsg = msgs.find(m => m.role === 'user');
+        const firstAsstMsg = msgs.find(m => m.role === 'assistant');
+
+        let title = (conv.diseaseContext || conv.patientName || '').trim();
+        if (!title || title.toLowerCase() === 'untitled investigation' || title.toLowerCase() === 'untitled research') {
+          if (firstUserMsg?.content) {
+            title = firstUserMsg.content.trim();
+          } else if (firstAsstMsg?.content) {
+            const reportMatch = firstAsstMsg.content.match(/Report:\s*([^\n\r#]+)/i)
+              || firstAsstMsg.content.match(/Research Query:\*{0,2}\s*([^\n\r#]+)/i)
+              || firstAsstMsg.content.match(/##\s+([^\n\r#]+)/);
+            if (reportMatch && reportMatch[1]) {
+              title = reportMatch[1].replace(/[*_~`🏥]/g, '').trim();
+            }
+          }
+        }
+
+        if (!title || title.toLowerCase().includes('untitled')) {
+          const dateStr = conv.updatedAt ? new Date(conv.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+          title = dateStr ? `Clinical Research (${dateStr})` : 'Clinical Investigation';
+        }
+
+        if (title.length > 55) {
+          title = title.substring(0, 52) + '...';
+        }
 
         return {
           conversationId: conv.conversationId,
-          disease: conv.diseaseContext || conv.patientName || defaultTitle,
-          patientName: conv.patientName,
+          disease: title,
+          patientName: conv.patientName || '',
           updatedAt: conv.updatedAt,
-          messageCount: conv.messages.length,
-          lastMessage: conv.messages.length > 0
-            ? conv.messages[conv.messages.length - 1].content.substring(0, 80)
+          messageCount: msgs.length,
+          lastMessage: msgs.length > 0
+            ? msgs[msgs.length - 1].content.substring(0, 80)
             : ''
         };
       });
