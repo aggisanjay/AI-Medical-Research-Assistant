@@ -2,7 +2,7 @@ import { useState } from "react";
 import { 
   Plus, MessageSquare, Trash2, Loader2,
   Home, Settings, ChevronLeft, ChevronRight, LogOut, FileText,
-  Wrench, ShieldCheck, KeyRound, BarChart3, Cpu, Network, Activity
+  Network, Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@clerk/react";
@@ -42,11 +42,6 @@ export function Sidebar({
     { id: "chat", label: "Research Workspace", icon: MessageSquare },
     { id: "documents", label: "Secure RAG Docs", icon: FileText },
     { id: "knowledge-graph", label: "Knowledge Graph", icon: Network },
-    { id: "mcp-tools", label: "MCP Tool Gateway", icon: Wrench },
-    { id: "approvals", label: "Human Approvals", icon: ShieldCheck },
-    { id: "audit-logs", label: "Audit Ledger", icon: KeyRound },
-    { id: "evaluations", label: "LLM Evaluation", icon: BarChart3 },
-    { id: "fine-tuning", label: "LoRA Adapters", icon: Cpu },
     { id: "observability", label: "Observability", icon: Activity },
     { id: "settings", label: "Settings", icon: Settings },
   ];

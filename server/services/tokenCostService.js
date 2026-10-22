@@ -56,11 +56,13 @@ class TokenCostService {
     promptText = '',
     completionText = '',
     exactPromptTokens,
-    exactCompletionTokens
+    exactCompletionTokens,
+    promptTokens: directPromptTokens,
+    completionTokens: directCompletionTokens
   }) {
     // 1. Determine tokens
-    const promptTokens = exactPromptTokens ?? this.estimateTokens(promptText);
-    const completionTokens = exactCompletionTokens ?? this.estimateTokens(completionText);
+    const promptTokens = exactPromptTokens ?? directPromptTokens ?? this.estimateTokens(promptText);
+    const completionTokens = exactCompletionTokens ?? directCompletionTokens ?? this.estimateTokens(completionText);
     const totalTokens = promptTokens + completionTokens;
 
     // 2. Lookup model pricing

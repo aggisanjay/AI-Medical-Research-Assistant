@@ -22,11 +22,6 @@ import { DashboardView } from "@/components/DashboardView";
 import { SettingsView } from "@/components/SettingsView";
 import { DocumentsView } from "@/components/DocumentsView";
 import { KnowledgeGraphView } from "@/components/KnowledgeGraphView";
-import { McpToolsView } from "@/components/McpToolsView";
-import { ApprovalsView } from "@/components/ApprovalsView";
-import { AuditView } from "@/components/AuditView";
-import { EvaluationView } from "@/components/EvaluationView";
-import { FineTuningView } from "@/components/FineTuningView";
 import { ObservabilityView } from "@/components/ObservabilityView";
 import { useAuth, useUser, useClerk, Show, UserButton } from "@clerk/react";
 
@@ -346,16 +341,6 @@ export function CuralinkApp() {
         return <DocumentsView onDocumentsChange={fetchDocuments} />;
       case "knowledge-graph":
         return <KnowledgeGraphView />;
-      case "mcp-tools":
-        return <McpToolsView />;
-      case "approvals":
-        return <ApprovalsView />;
-      case "audit-logs":
-        return <AuditView />;
-      case "evaluations":
-        return <EvaluationView />;
-      case "fine-tuning":
-        return <FineTuningView />;
       case "observability":
         return <ObservabilityView />;
       case "settings":
@@ -366,7 +351,7 @@ export function CuralinkApp() {
             items={conversations}
             loading={loadingConversations}
             onNavigate={setActiveTab} 
-            onSelectConversation={setConversationId}
+            onSelectConversation={handleSelectConversation}
             onSearchSuggest={handleSearchSuggest} 
           />
         );

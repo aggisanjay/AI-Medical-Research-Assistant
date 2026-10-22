@@ -1,19 +1,18 @@
 const assert = require('assert');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { detectPromptInjection, redactSensitiveData } = require('../middleware/guardrails');
-const approvalService = require('../services/approvalService');
-const mcpGateway = require('../services/mcpGateway');
 const knowledgeGraphService = require('../services/knowledgeGraphService');
-const evaluationService = require('../services/evaluationService');
-const fineTuningService = require('../services/fineTuningService');
-const auditService = require('../services/auditService');
+const documentParserService = require('../services/documentParserService');
+const tokenCostService = require('../services/tokenCostService');
+const observabilityService = require('../services/observabilityService');
 const connectDB = require('../config/db');
 
 async function runTestSuite() {
   console.log('\n🧪 ═══════════════════════════════════════════════════');
-  console.log('    CURALINK UNIFIED PLATFORM VERIFICATION TEST SUITE');
+  console.log('    CURALINK CLINICAL RESEARCH PLATFORM TEST SUITE');
   console.log('═══════════════════════════════════════════════════════\n');
 
   let passed = 0;
@@ -55,79 +54,7 @@ async function runTestSuite() {
     assert(scrubbed.includes('[REDACTED_EMAIL]'));
   });
 
-  // Test 3: MCP Gateway - Tool Registry & Schema Validation
-  await test('MCP Gateway: Tool registry contains tools with strict schemas', async () => {
-    const tools = mcpGateway.listTools();
-    assert(tools.length >= 6);
-    const pubmedTool = tools.find(t => t.toolName === 'pubmed_search');
-    assert(pubmedTool !== undefined);
-    assert.strictEqual(pubmedTool.riskClassification, 'low');
-
-    const exportTool = tools.find(t => t.toolName === 'export_research_report');
-    assert(exportTool !== undefined);
-    assert.strictEqual(exportTool.riskClassification, 'high_approval_required');
-  });
-
-  // Test 4: MCP Gateway - Controlled Execution & High-Risk Approval Interception
-  await test('MCP Gateway: High-risk tool execution pauses for approval', async () => {
-    const intercept = await mcpGateway.executeTool(
-      'export_research_report',
-      {
-        title: 'Q1 Oncology Brief',
-        reportContent: 'Detailed clinical report',
-        destination: 'external-portal',
-        classification: 'restricted'
-      },
-      { userId: 'user_analyst_test', workspaceId: 'ws-test' }
-    );
-
-    assert.strictEqual(intercept.status, 'approval_required');
-    assert(intercept.approvalId.startsWith('appr-'));
-  });
-
-  // Test 5: Human Approval Service - Lifecycle & Tamper Detection
-  await test('Approval Engine: Decides approval and prevents tampering', async () => {
-    const req = await approvalService.requestApproval({
-      workspaceId: 'ws-test',
-      actionType: 'export_report',
-      title: 'Export Dossier',
-      payload: { docId: 'doc-123', target: 'public' },
-      requestedBy: 'user_analyst'
-    });
-
-    assert.strictEqual(req.status, 'pending');
-
-    // Decide: Approve
-    const approved = await approvalService.decideApproval({
-      approvalId: req.approvalId,
-      decision: 'approved',
-      reviewerId: 'user_lead',
-      reviewerRole: 'lead_researcher'
-    });
-    assert.strictEqual(approved.status, 'approved');
-
-    // Execute approved action
-    const executed = await approvalService.executeApprovedAction(req.approvalId, 'user_lead');
-    assert.strictEqual(executed.success, true);
-  });
-
-  // Test 6: Audit Chain - Append-Only Cryptographic Verification
-  await test('Audit Engine: Append-only hash integrity verifies without corruption', async () => {
-    await auditService.recordEvent({
-      workspaceId: 'ws-test',
-      actorId: 'test_actor',
-      eventType: 'policy_decision',
-      resourceType: 'system',
-      action: 'integrity_benchmark_test',
-      details: { verified: true }
-    });
-
-    const verification = await auditService.verifyChainIntegrity(50);
-    assert.strictEqual(verification.valid, true);
-    assert.strictEqual(verification.compromised, false);
-  });
-
-  // Test 7: Knowledge Graph - Traversal and Contradiction Detection
+  // Test 3: Knowledge Graph - Traversal and Contradiction Detection
   await test('Knowledge Graph: Traverses multi-hop entities and surfaces contradictions', async () => {
     await knowledgeGraphService.ensureSeedData();
     const result = await knowledgeGraphService.getGraphContextForQuery('Pembrolizumab NSCLC');
@@ -136,32 +63,76 @@ async function runTestSuite() {
     assert(result.contradictions.length > 0);
   });
 
-  // Test 8: Evaluation Pipeline - Benchmark Evaluation Execution
-  await test('Evaluation Pipeline: Runs benchmark with factual accuracy and groundedness', async () => {
-    const run = await evaluationService.runEvaluation({
-      modelConfig: { provider: 'test', modelName: 'Mistral-7B' },
-      triggeredBy: 'test_runner'
+  // Test 4: Knowledge Graph - Live Evidence Ingestion
+  await test('Knowledge Graph: Dynamically ingests PubMed and Clinical Trial evidence nodes', async () => {
+    const samplePubs = [{
+      title: 'Targeted KRAS G12C inhibition in refractory non-small cell lung cancer',
+      abstract: 'Sotorasib yielded confirmed objective responses in advanced NSCLC patients.',
+      url: 'https://pubmed.ncbi.nlm.nih.gov/32955178/'
+    }];
+    const sampleTrials = [{
+      briefTitle: 'A Study of Adagrasib in Patients With Advanced Solid Tumors (KRYSTAL-1)',
+      status: 'Recruiting',
+      nctId: 'NCT03785249'
+    }];
+    const res = await knowledgeGraphService.ingestResearchEvidence({
+      disease: 'Non-Small Cell Lung Cancer',
+      publications: samplePubs,
+      trials: sampleTrials
     });
-
-    assert(run.metrics.factualAccuracy >= 0.7);
-    assert(run.metrics.groundednessScore >= 0.7);
-    assert.strictEqual(run.status, 'completed');
+    assert(res !== null && res.ingested === true);
   });
 
-  // Test 9: LoRA Fine-Tuning - Node.js ML Workflow & Model Registry Promotion/Rollback
-  await test('LoRA Model Customization: Node.js training completes and updates model registry', async () => {
-    const job = await fineTuningService.startFineTuningJob({
-      adapterName: 'test-lora-pico-v1',
-      epochs: 1,
-      userId: 'test_user'
+  // Test 5: Document Parser - Multi-Tier Resilient PDF & TXT Extraction
+  await test('Document Parser: Robustly extracts text from TXT and PDF documents', async () => {
+    // Test TXT parsing
+    const txtFile = {
+      originalname: 'oncology_notes.txt',
+      mimetype: 'text/plain',
+      size: 45,
+      buffer: Buffer.from('Patient presented with EGFR L858R mutation.')
+    };
+    const txtResult = await documentParserService.parse(txtFile);
+    assert(txtResult.includes('EGFR L858R'));
+
+    // Test PDF parsing
+    const samplePdfPath = path.join(__dirname, '..', 'node_modules', 'pdf-parse', 'test', 'data', '01-valid.pdf');
+    if (fs.existsSync(samplePdfPath)) {
+      const pdfBuf = fs.readFileSync(samplePdfPath);
+      const pdfFile = {
+        originalname: 'clinical_trial.pdf',
+        mimetype: 'application/pdf',
+        size: pdfBuf.length,
+        buffer: pdfBuf
+      };
+      const pdfResult = await documentParserService.parse(pdfFile);
+      assert(pdfResult.length > 100);
+    }
+  });
+
+  // Test 6: Token & Cost Engine - Real Prompt/Completion Cost & Savings Tracking
+  await test('Token & Cost Engine: Accurately calculates pricing and savings vs proprietary baselines', () => {
+    const cost = tokenCostService.calculateCost({
+      promptTokens: 1500,
+      completionTokens: 600,
+      model: 'mistralai/Mistral-7B-Instruct-v0.3',
+      provider: 'huggingface'
     });
 
-    assert.strictEqual(job.taskType, 'pico_extraction');
-    assert(job.jobId.startsWith('ft-'));
+    assert(cost.totalTokens === 2100);
+    assert(cost.promptTokens === 1500);
+    assert(cost.completionTokens === 600);
+    assert(typeof cost.costUSD === 'number');
+    assert(cost.savingsUSD > 0);
+    assert(cost.costFormatted.startsWith('$'));
+  });
 
-    // Promote to approved
-    const promoted = await fineTuningService.updateRegistryStatus(job.jobId, 'approved', 'test_user');
-    assert.strictEqual(promoted.registryStatus, 'approved');
+  // Test 7: Observability Service - System Telemetry & Token Ledger Aggregation
+  await test('Observability Service: Generates real-time system and database telemetry', async () => {
+    const telemetry = await observabilityService.getSystemTelemetry();
+    assert(telemetry.system.platform !== undefined);
+    assert(telemetry.tokenAndCostAnalytics !== undefined);
+    assert(typeof telemetry.tokenAndCostAnalytics.totalTokensConsumed === 'number');
   });
 
   console.log('\n═══════════════════════════════════════════════════════');

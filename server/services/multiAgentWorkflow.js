@@ -8,7 +8,6 @@ const llmService = require('./llmService');
 const contextService = require('./contextService');
 const ragService = require('./ragService');
 const knowledgeGraphService = require('./knowledgeGraphService');
-const auditService = require('./auditService');
 const observabilityService = require('./observabilityService');
 const tokenCostService = require('./tokenCostService');
 const logger = require('../utils/logger');

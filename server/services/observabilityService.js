@@ -1,12 +1,7 @@
 const os = require('os');
 const mongoose = require('mongoose');
-const Approval = require('../models/Approval');
-const AuditEvent = require('../models/AuditEvent');
-const EvaluationRun = require('../models/EvaluationRun');
-const FineTuningJob = require('../models/FineTuningJob');
 const TokenUsage = require('../models/TokenUsage');
 const Conversation = require('../models/Conversation');
-const mcpGateway = require('./mcpGateway');
 const tokenCostService = require('./tokenCostService');
 
 class ObservabilityService {
@@ -127,18 +122,10 @@ class ObservabilityService {
 
     const memory = process.memoryUsage();
     const [
-      pendingApprovals,
-      recentAuditEvents,
-      latestEvaluation,
-      activeJobsCount,
       mongoStatus,
       tokenAggResult,
       recentUsageDocs
     ] = await Promise.all([
-      Approval.countDocuments({ status: 'pending' }).catch(() => 0),
-      AuditEvent.countDocuments().catch(() => 0),
-      EvaluationRun.findOne().sort({ createdAt: -1 }).catch(() => null),
-      FineTuningJob.countDocuments({ status: 'running' }).catch(() => 0),
       Promise.resolve(mongoose.connection.readyState === 1 ? 'healthy' : 'disconnected'),
       TokenUsage.aggregate([
         {
@@ -159,9 +146,6 @@ class ObservabilityService {
         .lean()
         .catch(() => [])
     ]);
-
-    const mcpServers = mcpGateway.listServers();
-    const mcpTools = mcpGateway.listTools();
 
     // Authoritative source: MongoDB TokenUsage ledger
     const dbAgg = (tokenAggResult && tokenAggResult[0]) || {};
@@ -227,20 +211,6 @@ class ObservabilityService {
           ? parseFloat((this.metrics.totalErrors / totalQueries).toFixed(3))
           : 0,
         estimatedTokensConsumed: totalTokens
-      },
-      governanceAndApprovals: {
-        pendingApprovalsCount: pendingApprovals,
-        totalAuditEventsLogged: recentAuditEvents
-      },
-      mcpIntegrations: {
-        connectedServers: mcpServers.length,
-        registeredToolsCount: mcpTools.length,
-        servers: mcpServers
-      },
-      modelRegistryAndEvaluation: {
-        latestAccuracy: latestEvaluation?.metrics?.factualAccuracy !== undefined ? latestEvaluation.metrics.factualAccuracy : null,
-        latestGroundedness: latestEvaluation?.metrics?.groundednessScore !== undefined ? latestEvaluation.metrics.groundednessScore : null,
-        activeFineTuningJobs: activeJobsCount
       },
       tokenAndCostAnalytics: {
         totalTokensConsumed: totalTokens,
