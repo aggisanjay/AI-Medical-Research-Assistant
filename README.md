@@ -1,8 +1,8 @@
 # CuraLink — Agentic AI Medical Research Platform (v2.0)
 
-> Multi-Agent Biomedical Intelligence, Dynamic Knowledge Graph, Governed Multi-Tool Orchestration, and Reproducible Evaluation
+> Multi-Agent Biomedical Intelligence, Dynamic Knowledge Graph, Resilient Document RAG, and Real-Time Token Observability
 
-CuraLink is an integrated, production-oriented Agentic AI Medical Research Platform engineered with a **React 19 + TypeScript + Vite** frontend, a **Node.js/Express + MongoDB** backend, and zero-cost local-first foundation.
+CuraLink is an integrated, production-oriented Agentic AI Medical Research Platform engineered with a **React 19 + TypeScript + Vite** frontend, a **Node.js/Express + MongoDB** backend, and a zero-cost local-first foundation.
 
 ---
 
@@ -12,7 +12,7 @@ CuraLink is an integrated, production-oriented Agentic AI Medical Research Platf
                     ┌────────────────────────────────────────────────────────┐
                     │       CuraLink Web Client (React 19 + Vite)            │
                     │  Dashboard · Research Workspace · RAG Docs · KG Hub    │
-                    │  MCP Gateway · Approvals · Audit · Evaluations · LoRA  │
+                    │  Live Token Observability · Clinical Compliance        │
                     └───────────────────────────┬────────────────────────────┘
                                                 │ REST APIs + Clerk JWT
                                                 ▼
@@ -25,17 +25,18 @@ CuraLink is an integrated, production-oriented Agentic AI Medical Research Platf
 │   └─────────────────────────────────────────┬──────────────────────────────────────────┘   │
 │                                             │                                              │
 │   ┌─────────────────────────────────────────┴──────────────────────────────────────────┐   │
-│   │                    Bounded 9-Agent Research Orchestration Engine                   │   │
+│   │                    Bounded Multi-Agent Research Orchestration Engine               │   │
 │   │  1. Planner ──> 2. Search ──> 3. RAG ──> 4. PICO Extract ──> 5. Evidence Compare  │   │
 │   │  ──> 6. LLM Synthesis ──> 7. Citation Verify ──> 8. Report Gen ──> 9. Quality Eval │   │
 │   └──────┬──────────────────────┬───────────────────────┬───────────────────────┬──────┘   │
 │          │                      │                       │                       │          │
 │          ▼                      ▼                       ▼                       ▼          │
 │   ┌──────────────┐       ┌──────────────┐        ┌──────────────┐        ┌──────────────┐  │
-│   │ MCP Tool     │       │ Dynamic      │        │ Cryptographic│        │ LoRA Dataset │  │
-│   │ Gateway      │       │ Knowledge    │        │ Approval &   │        │ Stager &     │  │
-│   │ (Zod Schemas)│       │ Graph Engine │        │ Audit Chain  │        │ Model Hub    │  │
-│   │ Native/MCP   │       │ (Live PubMed)│        │ (SHA-256)    │        │ (Path B GPU) │  │
+│   │ Federated    │       │ Resilient    │        │ Dynamic      │        │ Real-Time    │  │
+│   │ Live Search  │       │ Document RAG │        │ Knowledge    │        │ Token & Cost │  │
+│   │ (PubMed,     │       │ (4-Tier PDF/ │        │ Graph Engine │        │ Observability│  │
+│   │ OpenAlex,    │       │ TXT Parser)  │        │ (Live PubMed)│        │ (Ledger/Cost)│  │
+│   │ Trials.gov)  │       │              │        │              │        │              │  │
 │   └──────────────┘       └──────────────┘        └──────────────┘        └──────────────┘  │
 └─────────────────────────────────────────────┬──────────────────────────────────────────────┘
                                               │
@@ -43,8 +44,8 @@ CuraLink is an integrated, production-oriented Agentic AI Medical Research Platf
                     ▼                                                    ▼
        ┌─────────────────────────┐                          ┌─────────────────────────┐
        │   MongoDB Community     │                          │ Groq / Ollama / HF      │
-       │  Workspaces, Docs, KG,  │                          │ Qwen 3.8 / Mistral-7B   │
-       │  Approvals, Audit Logs  │                          │ LLM Provider Engine     │
+       │  Conversations, Docs,   │                          │ Qwen 3.8 / Mistral-7B   │
+       │  TokenUsage Ledger, KG  │                          │ LLM Provider Engine     │
        └─────────────────────────┘                          └─────────────────────────┘
 ```
 
@@ -54,17 +55,13 @@ CuraLink is an integrated, production-oriented Agentic AI Medical Research Platf
 
 | Capability | Module / Screen | Data Source & Execution | Persistence | Verified Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Multi-Agent Orchestration** | Research Workspace (`/`) | Bounded 9-agent DAG; Groq/Ollama LLM; real latency & tokens | MongoDB `WorkflowRun`, `Conversation` | **Verified End-to-End** |
-| **Real Research Retrieval** | Agent 2 / MCP Gateway | PubMed (Entrez E-utilities), OpenAlex REST, ClinicalTrials.gov v2 | Live API responses with source provenance | **Verified End-to-End** |
-| **Citation Verification** | Agent 7 | Real regex extractor for PMIDs/NCTs/citations; lexical groundedness checking | Provenance metadata in report & chat | **Verified End-to-End** |
-| **Dynamic Knowledge Graph** | KG Hub (`/graph`) | MongoDB entity/relation store; ingests live evidence from PubMed & trials | MongoDB `GraphNode`, `GraphEdge` | **Verified End-to-End** |
-| **Human Approvals** | Approvals Center (`/approvals`) | State machine: pending ➔ approved/rejected ➔ executed; payload hash binding | MongoDB `ApprovalRequest` | **Verified End-to-End** |
-| **Cryptographic Audit Log** | Audit Ledger (`/audit`) | Append-only SHA-256 hash chaining; cryptographic integrity verification | MongoDB `AuditEvent` | **Verified End-to-End** |
-| **Reproducible Evaluation** | Evaluation Hub (`/evaluation`) | 4-case clinical QA benchmark; Recall@k, MRR, citation precision, groundedness | MongoDB `EvaluationRun` | **Verified End-to-End** |
-| **Secure RAG & Ingestion** | Documents (`/documents`) | Chunking (500-char/50 overlap); vector search; injection scan; PII redaction | MongoDB `Document`, `Chunk` | **Verified End-to-End** |
-| **Model Customization** | Fine-Tuning Hub (`/fine-tuning`) | Path B: honest dataset split (`train.jsonl`/`val.jsonl`), manifest & GPU probe | MongoDB `FineTuningJob`, filesystem | **Verified (Honest Path B)** |
-| **MCP Tool Ecosystem** | MCP Tools (`/mcp`) | In-process native tools with strict Zod schemas; transport hooks for external MCP | In-memory registry & audit log | **Verified End-to-End** |
-| **Live Observability** | Observability (`/observability`) | Real token counters, latency tracking, stage traces, spend estimates | MongoDB `TokenUsage`, Winston/Pino | **Verified End-to-End** |
+| **Multi-Agent Orchestration** | Research Workspace (`/`) | Bounded multi-agent DAG; Groq/Ollama/HF inference; real latency & tokens | MongoDB `Conversation`, `TokenUsage` | **Verified End-to-End** |
+| **Real Research Retrieval** | Live Evidence Retrieval | PubMed (Entrez E-utilities), OpenAlex REST, ClinicalTrials.gov v2 | Live API responses with source provenance | **Verified End-to-End** |
+| **Citation Verification** | Evidence Verification | Regex extractor for PMIDs/NCTs/citations; lexical groundedness checking | Provenance metadata in report & chat | **Verified End-to-End** |
+| **Dynamic Knowledge Graph** | Knowledge Graph (`/graph`) | MongoDB entity/relation store; ingests live evidence from PubMed & trials | MongoDB `GraphEntity`, `GraphRelation` | **Verified End-to-End** |
+| **Resilient Document RAG** | Secure RAG Docs (`/documents`) | 4-tier PDF/TXT extraction (pdf-parse ➔ pdf2json ➔ zlib streams ➔ text salvage) | MongoDB `Document`, `DocumentChunk` | **Verified End-to-End** |
+| **Clinical Guardrails** | Security Middleware | Prompt injection scanner; regex-based PII/PHI redaction (SSN, MRN, Email) | Enforced on every ingress/egress | **Verified End-to-End** |
+| **Real Token & Cost Observability** | Observability (`/observability`) | Authoritative MongoDB TokenUsage ledger, exact prompt/completion pricing catalog, and savings vs GPT-4o | MongoDB `TokenUsage`, Pino Logger | **Verified End-to-End** |
 
 ---
 
@@ -89,7 +86,7 @@ Services spun up:
 ```bash
 cd server
 npm install
-npm test            # Runs verification suite across all 9 platform capabilities
+npm test            # Runs verification test suite
 npm run dev         # Launches server on http://localhost:5000
 ```
 
@@ -113,12 +110,11 @@ cd server && npm test
 
 ### Verified Platform Test Assertions:
 * ✅ **Guardrails**: Prompt injection scanner blocks instruction overrides; regex redacts SSN, MRN, email, and phone identifiers.
-* ✅ **MCP Gateway**: Schema validation enforces strict typed inputs; high-risk tools (`export_research_report`) pause for approval.
-* ✅ **Human Approval Engine**: Validates state machine transitions, rejects expired approvals, and detects payload modifications via SHA-256 hash checks.
-* ✅ **Audit Ledger**: Append-only cryptographic hash chaining verifies across historical event blocks with zero corruption.
-* ✅ **Knowledge Graph Engine**: Traverses multi-hop clinical entities and surfaces discordant or contradictory clinical findings.
-* ✅ **Evaluation Pipeline**: Evaluates factual accuracy, Recall@k, MRR, citation precision, and lexical groundedness against clinical benchmark references.
-* ✅ **LoRA Model Customization**: Honest Path B verifies dataset generation, produces validated JSONL splits and manifest, probes PyTorch/CUDA availability, and records model registry state.
+* ✅ **Knowledge Graph Traversal**: Traverses multi-hop clinical entities and surfaces discordant or contradictory clinical findings.
+* ✅ **Knowledge Graph Dynamic Ingestion**: Dynamically ingests and links live PubMed and Clinical Trial evidence nodes to clinical condition entities.
+* ✅ **Document Parser**: Multi-tier resilient parser extracts text from TXT and complex PDFs without token length limits or parsing crashes.
+* ✅ **Token & Cost Engine**: Accurately calculates pricing and savings vs proprietary baselines (GPT-4o) using real prompt and completion token counts.
+* ✅ **Observability Service**: Aggregates real-time system metrics, latency distribution, and the MongoDB TokenUsage ledger.
 
 ---
 
@@ -126,32 +122,22 @@ cd server && npm test
 
 | Route | Method | Description | Permission |
 | :--- | :--- | :--- | :--- |
-| `/api/chat/message` | `POST` | Execute 9-Agent Research Workflow | Authenticated User |
+| `/api/chat/message` | `POST` | Execute Multi-Agent Research Workflow | Authenticated User |
 | `/api/chat/conversations` | `GET` | List user research conversations with titles and token metrics | Authenticated User |
+| `/api/chat/conversations/:id` | `GET` | Retrieve investigation history and messages | Authenticated User |
+| `/api/chat/conversations/:id` | `DELETE` | Delete research conversation | Authenticated User |
 | `/api/documents/upload` | `POST` | Upload and chunk PDF/TXT for RAG | Authenticated User |
-| `/api/mcp/tools` | `GET` | List registered MCP tools and schemas | Public / Read |
-| `/api/mcp/execute` | `POST` | Execute tool with risk policy check | Role-checked / Approval |
-| `/api/approvals` | `GET` | List pending and historical approvals | Lead / Admin |
-| `/api/approvals/request` | `POST` | Request approval for sensitive action | Researcher |
-| `/api/approvals/:id/decide` | `POST` | Approve or reject request with reason | Lead / Admin |
-| `/api/approvals/:id/execute` | `POST` | Execute approved action with revalidation | Lead / Admin |
-| `/api/audit/events` | `GET` | Stream append-only audit events | Auditor / Admin |
-| `/api/audit/verify` | `GET` | Verify SHA-256 audit chain integrity | Auditor / Admin |
-| `/api/evaluations/runs` | `GET` | List automated benchmark runs | Researcher / Auditor |
-| `/api/evaluations/run` | `POST` | Trigger fresh reproducible evaluation benchmark | Lead Researcher |
-| `/api/models/jobs` | `GET` | List LoRA training jobs & registry | Researcher |
-| `/api/models/jobs/start` | `POST` | Stage dataset and initialize training job | Lead Researcher |
-| `/api/models/registry/promote` | `POST` | Promote adapter to Production | Lead Researcher |
-| `/api/models/registry/rollback` | `POST` | Rollback production model to previous | Lead Researcher |
+| `/api/documents` | `GET` | List user ingested documents | Authenticated User |
+| `/api/documents/:id` | `DELETE` | Delete ingested document and vector chunks | Authenticated User |
 | `/api/graph/entities` | `GET` | Search Knowledge Graph entities | Public / Read |
 | `/api/graph/traverse` | `POST` | Traverse multi-hop entity pathways | Public / Read |
-| `/api/observability/telemetry` | `GET` | Real-time system health and latencies | Public / Read |
+| `/api/observability/telemetry` | `GET` | Real-time system health, token ledger, and cost metrics | Public / Read |
+| `/api/health` | `GET` | System health check and platform capabilities | Public / Read |
 
 ---
 
 ## 🔒 Security & Medical Disclaimers
 
 1. **Non-Clinical Research Platform**: CuraLink is strictly an investigative research-support tool for biomedical literature exploration and trial analysis. It does **not** provide clinical diagnosis, prescriptive treatments, or substitute for licensed clinician judgment.
-2. **Honest Fine-Tuning Execution**: CuraLink does not simulate fake backpropagation in Node.js. It exports validated JSONL training splits and probes for external GPU workers running PyTorch/PEFT.
-3. **Provable Citation Integrity**: Synthesis claims are verified against retrieved abstracts and document chunks. Citations link to empirical PMIDs, DOIs, and ClinicalTrials.gov identifiers.
-4. **Data Isolation**: Multi-tenant workspace boundaries and user IDs are validated across document queries, graph traversals, and approval workflows.
+2. **Provable Citation Integrity**: Synthesis claims are verified against retrieved abstracts and document chunks. Citations link to empirical PMIDs, DOIs, and ClinicalTrials.gov identifiers.
+3. **Data Isolation & HIPAA Privacy**: Multi-tenant workspace boundaries and user IDs are validated across document queries and graph traversals. Automated regex scans redact sensitive patient PII/PHI (SSNs, MRNs, emails, phone numbers) before processing.
