@@ -15,8 +15,16 @@ const requireClerkAuth = requireAuth();
  * Returns the authenticated Clerk user ID or null.
  */
 function getUserId(req) {
-  const { userId } = getAuth(req);
-  return userId || null;
+  try {
+    if (typeof req.auth === 'function' || req.auth?.userId) {
+      const authObj = typeof req.auth === 'function' ? req.auth() : req.auth;
+      if (authObj?.userId) return authObj.userId;
+    }
+    const { userId } = getAuth(req);
+    return userId || req.userId || null;
+  } catch (err) {
+    return req.userId || req.auth?.userId || null;
+  }
 }
 
 module.exports = {

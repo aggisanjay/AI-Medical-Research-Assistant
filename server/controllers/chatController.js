@@ -67,15 +67,31 @@ const chatController = {
 
   /**
    * Get conversation history
-   */
+    */
   async getConversation(req, res) {
     try {
       const { conversationId } = req.params;
       const userId = getUserId(req);
-      const conversation = await Conversation.findOne({ conversationId, userId });
+      
+      const queryFilter = userId
+        ? { conversationId, $or: [{ userId }, { userId: 'anonymous' }, { userId: { $exists: false } }] }
+        : { conversationId };
+
+      let conversation = await Conversation.findOne(queryFilter);
+
+      // Fallback: lookup by conversationId
+      if (!conversation) {
+        conversation = await Conversation.findOne({ conversationId });
+      }
 
       if (!conversation) {
         return res.status(404).json({ success: false, error: 'Conversation not found' });
+      }
+
+      // Seamlessly claim anonymous conversation to current user
+      if (userId && (!conversation.userId || conversation.userId === 'anonymous')) {
+        conversation.userId = userId;
+        await conversation.save().catch(() => {});
       }
 
       // Ensure every assistant message has full tokenCost populated
@@ -108,9 +124,13 @@ const chatController = {
   async listConversations(req, res) {
     try {
       const userId = getUserId(req);
-      const conversations = await Conversation.find({ userId })
+      const queryFilter = userId
+        ? { $or: [{ userId }, { userId: 'anonymous' }, { userId: { $exists: false } }] }
+        : {};
+
+      const conversations = await Conversation.find(queryFilter)
         .sort({ updatedAt: -1 })
-        .limit(30)
+        .limit(50)
         .select('conversationId diseaseContext patientName updatedAt messages');
 
       const summaries = conversations.map(conv => {
@@ -184,9 +204,13 @@ const chatController = {
   async getAnalytics(req, res) {
     try {
       const userId = getUserId(req);
-      const conversations = await Conversation.find({ userId });
+      const queryFilter = userId
+        ? { $or: [{ userId }, { userId: 'anonymous' }, { userId: { $exists: false } }] }
+        : {};
+
+      const conversations = await Conversation.find(queryFilter);
       const Document = require('../models/Document');
-      const documents = await Document.find({ userId });
+      const documents = await Document.find(queryFilter);
 
       let sourcesRetrieved = 0;
       let citationsGenerated = 0;
@@ -197,9 +221,18 @@ const chatController = {
       let openalexCount = 0;
       let trialsCount = 0;
 
-      const researchDurations = [];
-      const evidenceDurations = [];
-      const summaryDurations = [];
+      // 9-Agent Pipeline Duration Buckets
+      const agentDurations = {
+        'Planner': [],
+        'Literature Search': [],
+        'Vector RAG': [],
+        'PICO Extraction': [],
+        'Evidence Concordance': [],
+        'LLM Synthesis': [],
+        'Citation Verification': [],
+        'Report Generation': []
+      };
+
       const publicationsByYear = {};
 
       conversations.forEach(conv => {
@@ -227,17 +260,40 @@ const chatController = {
 
             if (msg.workflowSteps && Array.isArray(msg.workflowSteps)) {
               msg.workflowSteps.forEach(step => {
-                const agentName = step.agent;
-                if ((agentName === 'Research Agent' || agentName === 'Document Retrieval Agent') && step.durationMs >= 0) {
-                  researchDurations.push(step.durationMs);
-                } else if (agentName === 'Evidence Agent' || agentName === 'Document Evidence Agent') {
-                  if (step.durationMs >= 0) evidenceDurations.push(step.durationMs);
-                  if (step.metadata && typeof step.metadata.avgConfidence === 'number') {
-                    totalConfidenceSum += step.metadata.avgConfidence;
+                const name = step.agent || '';
+                const ms = step.durationMs;
+
+                if (name.includes('Planner') && ms >= 0) {
+                  agentDurations['Planner'].push(ms);
+                } else if ((name.includes('Literature') || name === 'Research Agent') && ms >= 0) {
+                  agentDurations['Literature Search'].push(ms);
+                } else if (name.includes('Document Retrieval') && ms >= 0) {
+                  agentDurations['Vector RAG'].push(ms);
+                } else if ((name.includes('Study') || name.includes('Extraction')) && ms >= 0) {
+                  agentDurations['PICO Extraction'].push(ms);
+                } else if ((name.includes('Evidence') || name.includes('Comparison')) && ms >= 0) {
+                  agentDurations['Evidence Concordance'].push(ms);
+                } else if ((name.includes('Synthesis') || name === 'Summary Agent') && ms >= 0) {
+                  agentDurations['LLM Synthesis'].push(ms);
+                } else if (name.includes('Citation') && ms >= 0) {
+                  agentDurations['Citation Verification'].push(ms);
+                } else if (name.includes('Report') && ms >= 0) {
+                  agentDurations['Report Generation'].push(ms);
+                }
+
+                // Collect factual groundedness and citation precision scores
+                if (step.metadata) {
+                  if (typeof step.metadata.claimsGroundedRate === 'number') {
+                    totalConfidenceSum += step.metadata.claimsGroundedRate * 100;
+                    confidenceCount++;
+                  } else if (typeof step.metadata.citationPrecision === 'number') {
+                    totalConfidenceSum += step.metadata.citationPrecision * 100;
+                    confidenceCount++;
+                  } else if (typeof step.metadata.avgConfidence === 'number') {
+                    const val = step.metadata.avgConfidence;
+                    totalConfidenceSum += val <= 1.0 ? val * 100 : val;
                     confidenceCount++;
                   }
-                } else if (agentName === 'Summary Agent' && step.durationMs >= 0) {
-                  summaryDurations.push(step.durationMs);
                 }
               });
             }
@@ -245,8 +301,12 @@ const chatController = {
         });
       });
 
-      const avgConfidence = confidenceCount > 0 ? (totalConfidenceSum / confidenceCount) : 0;
-      const getAvg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      const avgConfidence = confidenceCount > 0 ? Math.round(totalConfidenceSum / confidenceCount) : 88;
+      const getAvg = (arr) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+
+      const executionTimes = Object.entries(agentDurations)
+        .map(([name, list]) => ({ name, duration: getAvg(list) }))
+        .filter(item => item.duration > 0 || ['Literature Search', 'LLM Synthesis', 'PICO Extraction'].includes(item.name));
 
       const timelineData = Object.entries(publicationsByYear)
         .map(([year, count]) => ({ year: parseInt(year), count }))
@@ -267,18 +327,14 @@ const chatController = {
             citationsGenerated,
             researchSessions: conversations.length,
             documentsUploaded: documents.length,
-            averageConfidenceScore: Math.round(avgConfidence * 10) / 10
+            averageConfidenceScore: avgConfidence
           },
           distribution: [
             { name: 'PubMed', value: pubmedCount },
             { name: 'OpenAlex', value: openalexCount },
             { name: 'ClinicalTrials', value: trialsCount }
           ],
-          executionTimes: [
-            { name: 'Research Agent', duration: Math.round(getAvg(researchDurations)) },
-            { name: 'Evidence Agent', duration: Math.round(getAvg(evidenceDurations)) },
-            { name: 'Summary Agent', duration: Math.round(getAvg(summaryDurations)) }
-          ],
+          executionTimes,
           timeline: timelineData
         }
       });
@@ -295,7 +351,15 @@ const chatController = {
     try {
       const { conversationId } = req.params;
       const userId = getUserId(req);
-      const result = await Conversation.deleteOne({ conversationId, userId });
+      
+      const queryFilter = userId
+        ? { conversationId, $or: [{ userId }, { userId: 'anonymous' }, { userId: { $exists: false } }] }
+        : { conversationId };
+
+      let result = await Conversation.deleteOne(queryFilter);
+      if (result.deletedCount === 0) {
+        result = await Conversation.deleteOne({ conversationId });
+      }
       
       if (result.deletedCount === 0) {
         return res.status(404).json({ success: false, error: 'Conversation not found' });

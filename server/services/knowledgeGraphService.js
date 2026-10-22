@@ -293,6 +293,131 @@ class KnowledgeGraphService {
       contradictions
     };
   }
+
+  /**
+   * Ingest and link live retrieved research publications and clinical trials into the Knowledge Graph
+   */
+  async ingestResearchEvidence({ publications = [], trials = [], query = '', disease = '' } = {}) {
+    await this.ensureSeedData();
+    const topic = (disease || query || '').trim();
+    if (!topic || (!publications.length && !trials.length)) return null;
+
+    try {
+      const topicId = `ent-cond-${topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 30)}`;
+
+      // 1. Ensure condition entity exists
+      await GraphEntity.findOneAndUpdate(
+        { entityId: topicId },
+        {
+          $setOnInsert: {
+            entityId: topicId,
+            label: topic,
+            type: 'Condition',
+            description: `Clinical condition investigated in research query: "${topic}"`,
+            sourceProvenance: { sourceType: 'PubMed', sourceId: topic, url: '' },
+            properties: { isLiveRetrieved: true }
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      // 2. Link Publications
+      for (const pub of publications.slice(0, 6)) {
+        if (!pub.title) continue;
+        const pubId = `ent-pub-${(pub.url || pub.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 36)}`;
+        
+        await GraphEntity.findOneAndUpdate(
+          { entityId: pubId },
+          {
+            $setOnInsert: {
+              entityId: pubId,
+              label: pub.title.substring(0, 100),
+              type: 'Publication',
+              aliases: pub.authors?.slice(0, 2) || [],
+              description: pub.abstract ? pub.abstract.substring(0, 300) : pub.title,
+              sourceProvenance: {
+                sourceType: 'PubMed',
+                sourceId: pub.url || 'PMID',
+                url: pub.url || ''
+              },
+              properties: { year: pub.year, source: pub.source, isLiveRetrieved: true }
+            }
+          },
+          { upsert: true }
+        );
+
+        const relId = `rel-${pubId}-${topicId}`;
+        await GraphRelation.findOneAndUpdate(
+          { relationId: relId },
+          {
+            $setOnInsert: {
+              relationId: relId,
+              fromEntityId: pubId,
+              toEntityId: topicId,
+              type: 'REPORTS_FINDING',
+              strength: 0.92,
+              evidenceSnippet: pub.abstract ? pub.abstract.substring(0, 250) : pub.title,
+              sourceId: pub.url,
+              sourceUrl: pub.url,
+              properties: { isLiveRetrieved: true }
+            }
+          },
+          { upsert: true }
+        );
+      }
+
+      // 3. Link Clinical Trials
+      for (const trial of trials.slice(0, 4)) {
+        const trialTitle = trial.title || trial.briefTitle;
+        if (!trialTitle) continue;
+        const trialId = `ent-trial-${(trial.nctId || trialTitle).toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 36)}`;
+
+        await GraphEntity.findOneAndUpdate(
+          { entityId: trialId },
+          {
+            $setOnInsert: {
+              entityId: trialId,
+              label: trialTitle.substring(0, 100),
+              type: 'ClinicalTrial',
+              aliases: trial.nctId ? [trial.nctId] : [],
+              description: trial.eligibility ? trial.eligibility.substring(0, 300) : trialTitle,
+              sourceProvenance: {
+                sourceType: 'ClinicalTrials',
+                sourceId: trial.nctId || 'NCT',
+                url: trial.url || ''
+              },
+              properties: { status: trial.status, phase: trial.phase, isLiveRetrieved: true }
+            }
+          },
+          { upsert: true }
+        );
+
+        const relId = `rel-${trialId}-${topicId}`;
+        await GraphRelation.findOneAndUpdate(
+          { relationId: relId },
+          {
+            $setOnInsert: {
+              relationId: relId,
+              fromEntityId: trialId,
+              toEntityId: topicId,
+              type: 'INVESTIGATES',
+              strength: 0.95,
+              evidenceSnippet: trial.eligibility ? trial.eligibility.substring(0, 250) : trialTitle,
+              sourceId: trial.nctId,
+              sourceUrl: trial.url,
+              properties: { isLiveRetrieved: true }
+            }
+          },
+          { upsert: true }
+        );
+      }
+
+      return { ingested: true, topic: topicId };
+    } catch (err) {
+      logger.warn({ err: err.message }, 'Live graph evidence ingestion skipped');
+      return null;
+    }
+  }
 }
 
 module.exports = new KnowledgeGraphService();

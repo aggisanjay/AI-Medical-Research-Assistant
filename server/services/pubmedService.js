@@ -18,11 +18,29 @@ class PubmedService {
     const { maxResults = 100 } = options;
 
     try {
+      // Step 0: Direct PMID fetch if provided
+      if (expandedQuery?.pmids || expandedQuery?.pmid) {
+        const directPmids = Array.isArray(expandedQuery.pmids)
+          ? expandedQuery.pmids
+          : [expandedQuery.pmid || expandedQuery.pmids];
+        const publications = await this._fetchDetails(directPmids);
+        console.log(`📄 PubMed: Retrieved ${publications.length} publications directly via PMIDs`);
+        return publications;
+      }
+
       // Step 1: Search for PMIDs using multiple query variants
-      const queries = [
-        expandedQuery.pubmedQuery,
-        expandedQuery.primaryQuery
-      ].filter(Boolean);
+      const queries = (
+        Array.isArray(expandedQuery)
+          ? expandedQuery
+          : typeof expandedQuery === 'string'
+            ? [expandedQuery]
+            : [
+                expandedQuery?.pubmedQuery,
+                expandedQuery?.primaryQuery,
+                expandedQuery?.query,
+                ...(Array.isArray(expandedQuery?.expandedQueries) ? expandedQuery.expandedQueries : [])
+              ]
+      ).filter(Boolean);
 
       let allIds = new Set();
 

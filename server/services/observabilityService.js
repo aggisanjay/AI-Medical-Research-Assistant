@@ -163,13 +163,13 @@ class ObservabilityService {
     const mcpServers = mcpGateway.listServers();
     const mcpTools = mcpGateway.listTools();
 
-    // Aggregate DB totals with session in-memory updates
+    // Authoritative source: MongoDB TokenUsage ledger
     const dbAgg = (tokenAggResult && tokenAggResult[0]) || {};
-    const totalTokens = (dbAgg.totalTokens || 0) + (this.metrics.totalTokensEstimated || 0);
-    const totalPromptTokens = (dbAgg.totalPromptTokens || 0) + (this.metrics.totalPromptTokens || 0);
-    const totalCompletionTokens = (dbAgg.totalCompletionTokens || 0) + (this.metrics.totalCompletionTokens || 0);
-    const totalCostUSD = parseFloat(((dbAgg.totalCostUSD || 0) + (this.metrics.totalCostUSD || 0)).toFixed(5));
-    const totalSavingsUSD = parseFloat(((dbAgg.totalSavingsUSD || 0) + (this.metrics.totalSavingsUSD || 0)).toFixed(5));
+    const totalTokens = (dbAgg.totalTokens || 0) > 0 ? dbAgg.totalTokens : (this.metrics.totalTokensEstimated || 0);
+    const totalPromptTokens = (dbAgg.totalPromptTokens || 0) > 0 ? dbAgg.totalPromptTokens : (this.metrics.totalPromptTokens || 0);
+    const totalCompletionTokens = (dbAgg.totalCompletionTokens || 0) > 0 ? dbAgg.totalCompletionTokens : (this.metrics.totalCompletionTokens || 0);
+    const totalCostUSD = (dbAgg.totalCostUSD || 0) > 0 ? parseFloat(dbAgg.totalCostUSD.toFixed(5)) : parseFloat((this.metrics.totalCostUSD || 0).toFixed(5));
+    const totalSavingsUSD = (dbAgg.totalSavingsUSD || 0) > 0 ? parseFloat(dbAgg.totalSavingsUSD.toFixed(5)) : parseFloat((this.metrics.totalSavingsUSD || 0).toFixed(5));
     const totalQueries = Math.max(dbAgg.queryCount || 0, this.metrics.totalQueriesProcessed);
 
     // Format recent query ledger for live display
@@ -238,8 +238,8 @@ class ObservabilityService {
         servers: mcpServers
       },
       modelRegistryAndEvaluation: {
-        latestAccuracy: latestEvaluation?.metrics?.factualAccuracy ?? 0.88,
-        latestGroundedness: latestEvaluation?.metrics?.groundednessScore ?? 0.92,
+        latestAccuracy: latestEvaluation?.metrics?.factualAccuracy !== undefined ? latestEvaluation.metrics.factualAccuracy : null,
+        latestGroundedness: latestEvaluation?.metrics?.groundednessScore !== undefined ? latestEvaluation.metrics.groundednessScore : null,
         activeFineTuningJobs: activeJobsCount
       },
       tokenAndCostAnalytics: {

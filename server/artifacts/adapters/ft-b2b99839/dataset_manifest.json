@@ -1,0 +1,7 @@
+{
+  "task": "pico_extraction",
+  "datasetVersion": "v2.0",
+  "sampleCount": 3,
+  "exportedAt": "2026-10-22T06:04:08.818Z",
+  "format": "alpaca_instruction_jsonl"
+}

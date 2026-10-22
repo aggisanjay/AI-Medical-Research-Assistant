@@ -1,7 +1,10 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { User, Sparkles, FileText, Coins, ChevronDown, Cpu, Zap, Activity } from "lucide-react";
+import { 
+  User, Sparkles, FileText, Coins, ChevronDown, Cpu, Zap, 
+  Activity, BookOpen, FlaskConical, MapPin, Copy, Check 
+} from "lucide-react";
 import type { ChatMessage } from "@/lib/api";
 import { PublicationCard } from "./PublicationCard";
 import { ClinicalTrialCard } from "./ClinicalTrialCard";
@@ -15,6 +18,16 @@ interface Props {
 
 export function MessageBubble({ message, onSuggestion }: Props) {
   const [showTokenDetails, setShowTokenDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (message.content) {
+      navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   if (message.role === "user") {
     const s = message.structuredInput;
     const display =
@@ -24,17 +37,27 @@ export function MessageBubble({ message, onSuggestion }: Props) {
     return (
       <div className="flex justify-end">
         <div className="flex items-start gap-3 max-w-[85%]">
-          <div className="rounded-3xl rounded-tr-md bg-[#121212] border border-white/8 px-5 py-3.5 text-xs sm:text-sm text-slate-100">
+          <div className="rounded-3xl rounded-tr-md bg-[#121212] border border-white/8 px-5 py-3.5 text-xs sm:text-sm text-slate-100 shadow-sm">
             <div className="font-normal leading-relaxed">{display}</div>
             {s && (s.patientName || s.location) && (
-              <div className="mt-2.5 pt-2 border-t border-white/8 text-[10px] text-slate-500 flex items-center gap-3">
-                {s.patientName && <span className="flex items-center gap-1">👤 {s.patientName}</span>}
-                {s.location && <span className="flex items-center gap-1">📍 {s.location}</span>}
+              <div className="mt-2.5 pt-2 border-t border-white/8 text-[11px] text-slate-400 flex flex-wrap items-center gap-3">
+                {s.patientName && (
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <User className="h-3 w-3 text-cyan-400" />
+                    <span>{s.patientName}</span>
+                  </span>
+                )}
+                {s.location && (
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <MapPin className="h-3 w-3 text-rose-400" />
+                    <span>{s.location}</span>
+                  </span>
+                )}
               </div>
             )}
           </div>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#18181b] border border-white/10 text-slate-300">
-            <User className="h-4 w-4" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#18181b] border border-white/10 text-slate-300">
+            <User className="h-4 w-4 text-slate-300" />
           </div>
         </div>
       </div>
@@ -43,8 +66,9 @@ export function MessageBubble({ message, onSuggestion }: Props) {
 
   return (
     <div className="flex items-start gap-3">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-xs">
-        C
+      {/* Real AI Assistant Badge */}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-indigo-500/25 border border-cyan-500/30 text-cyan-400 shadow-sm shadow-cyan-500/10 mt-1">
+        <Sparkles className="h-4 w-4 text-cyan-300" />
       </div>
       <div className="flex-1 min-w-0 space-y-3.5">
 
@@ -60,7 +84,24 @@ export function MessageBubble({ message, onSuggestion }: Props) {
         {message.role === "assistant" && message.responseMode === "executive" ? (
           <ExecutiveSummaryCard message={message} />
         ) : (
-          <div className="editorial-card px-4 sm:px-5 py-4 border border-white/8 relative overflow-hidden">
+          <div className="editorial-card px-4 sm:px-5 py-4 border border-white/8 relative overflow-hidden bg-[#0d0d0f]/90 shadow-sm">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2.5 mb-3 text-[11px] text-slate-400 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-medium text-[10px]">
+                  <Sparkles className="h-3 w-3 text-cyan-400" /> Clinical Research Dossier
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">NCBI & Trial Grounded</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-[10px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer border border-white/5"
+                title="Copy clinical synthesis to clipboard"
+              >
+                {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3 text-slate-400" />}
+                <span>{copied ? "Copied" : "Copy Dossier"}</span>
+              </button>
+            </div>
             <div className="prose-research max-w-none text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{sanitizeReportMarkdown(message.content)}</ReactMarkdown>
             </div>
@@ -185,7 +226,7 @@ export function MessageBubble({ message, onSuggestion }: Props) {
         })()}
 
         {message.documentChunks && message.documentChunks.length > 0 && (
-          <Section title="Uploaded Document Sources" count={message.documentChunks.length}>
+          <Section title="Uploaded Document Sources" count={message.documentChunks.length} icon={FileText}>
             <div className="space-y-2">
               {message.documentChunks.map((chunk, i) => (
                 <div
@@ -212,7 +253,7 @@ export function MessageBubble({ message, onSuggestion }: Props) {
 
         {/* Publications Grid */}
         {message.publications && message.publications.length > 0 && (
-          <Section title="PubMed & OpenAlex Citations" count={message.publications.length}>
+          <Section title="PubMed & OpenAlex Citations" count={message.publications.length} icon={BookOpen}>
             <div className="grid sm:grid-cols-2 gap-3.5">
               {message.publications.map((p, i) => (
                 <PublicationCard key={i} pub={p} />
@@ -223,7 +264,7 @@ export function MessageBubble({ message, onSuggestion }: Props) {
 
         {/* Clinical Trials Grid */}
         {message.clinicalTrials && message.clinicalTrials.length > 0 && (
-          <Section title="Matched Clinical Registries" count={message.clinicalTrials.length}>
+          <Section title="Matched Clinical Registries" count={message.clinicalTrials.length} icon={FlaskConical}>
             <div className="grid sm:grid-cols-2 gap-3.5">
               {message.clinicalTrials.map((t, i) => (
                 <ClinicalTrialCard key={i} trial={t} />
@@ -235,8 +276,8 @@ export function MessageBubble({ message, onSuggestion }: Props) {
         {/* Suggested Follow-up Questions */}
         {message.suggestedQuestions && message.suggestedQuestions.length > 0 && (
           <div className="pt-1">
-            <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500 mb-2.5">
-              <Sparkles className="h-3 w-3 text-blue-400" />
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2.5">
+              <Sparkles className="h-3 w-3 text-cyan-400" />
               Suggested Clinical Queries
             </div>
             <div className="flex flex-wrap gap-2">
@@ -244,7 +285,7 @@ export function MessageBubble({ message, onSuggestion }: Props) {
                 <button
                   key={i}
                   onClick={() => onSuggestion?.(q)}
-                  className="text-left text-xs px-3.5 py-2 rounded-full border border-white/8 bg-[#0a0a0a] hover:border-white/20 text-slate-300 hover:text-white transition-all cursor-pointer font-normal"
+                  className="text-left text-xs px-3.5 py-2 rounded-full border border-white/8 bg-[#0a0a0a] hover:border-cyan-500/30 hover:bg-cyan-950/20 text-slate-300 hover:text-white transition-all cursor-pointer font-normal"
                 >
                   {q}
                 </button>
@@ -257,12 +298,23 @@ export function MessageBubble({ message, onSuggestion }: Props) {
   );
 }
 
-function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+function Section({ 
+  title, 
+  count, 
+  icon: Icon, 
+  children 
+}: { 
+  title: string; 
+  count: number; 
+  icon?: any; 
+  children: React.ReactNode 
+}) {
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500 ml-1">
+      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 ml-1">
+        {Icon && <Icon className="h-3.5 w-3.5 text-cyan-400 shrink-0" />}
         {title}
-        <span className="text-[10px] px-2 py-0.2 bg-[#121212] border border-white/8 rounded-full text-slate-400 font-mono">{count}</span>
+        <span className="text-[10px] px-2 py-0.5 bg-[#121212] border border-white/8 rounded-full text-slate-300 font-mono">{count}</span>
       </div>
       {children}
     </div>

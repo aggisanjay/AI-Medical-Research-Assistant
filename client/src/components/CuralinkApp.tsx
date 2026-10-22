@@ -232,6 +232,11 @@ export function CuralinkApp() {
     setRefreshKey((k) => k + 1);
   };
 
+  const handleSelectConversation = (id: string) => {
+    setConversationId(id);
+    setActiveTab("chat");
+  };
+
   const handleNew = () => {
     setConversationId(null);
     setMessages([]);
@@ -331,7 +336,7 @@ export function CuralinkApp() {
             items={conversations}
             loading={loadingConversations}
             onNavigate={setActiveTab} 
-            onSelectConversation={setConversationId}
+            onSelectConversation={handleSelectConversation}
             onSearchSuggest={handleSearchSuggest} 
           />
         );
@@ -373,35 +378,37 @@ export function CuralinkApp() {
       <div className="flex-1 flex flex-col min-h-0 relative">
         <div ref={scrollerRef} className="flex-1 overflow-y-auto min-h-0 bg-black">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[55vh] max-w-2xl mx-auto px-4 py-8 text-center space-y-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-base">
-                C
+            <div className="flex flex-col items-center justify-center min-h-[55vh] max-w-2xl mx-auto px-4 py-8 text-center space-y-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/25 via-blue-500/20 to-indigo-600/30 border border-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/10">
+                <Sparkles className="h-6 w-6 text-cyan-300" />
               </div>
               <div className="space-y-1.5">
                 <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-white">
                   Start a New Investigation
                 </h1>
                 <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed font-normal">
-                  Enter your clinical query below. Curalink's multi-agent system federates searches across PubMed, OpenAlex, and ClinicalTrials.gov to generate structured evidence briefs.
+                  Enter your clinical query below. Curalink's 9-agent system federates searches across PubMed, OpenAlex, and ClinicalTrials.gov to generate structured evidence briefs.
                 </p>
               </div>
               <div className="w-full pt-2">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2.5">
-                  Quick-Start Queries
+                  Suggested Clinical Investigations
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2 text-left">
                   {[
-                    "Latest immunotherapy approaches for stage IV melanoma",
-                    "Emerging cancer immunotherapy approaches",
-                    "Latest treatments for Alzheimer's",
-                    "Long COVID clinical findings"
-                  ].map((q) => (
+                    { q: "Latest immunotherapy approaches for stage IV melanoma", icon: FlaskConical, color: "text-emerald-400" },
+                    { q: "Osimertinib clinical trial outcomes in EGFR-mutant NSCLC", icon: BookOpen, color: "text-blue-400" },
+                    { q: "Recent CAR-T cell therapy advancements in relapsed lymphoma", icon: Globe, color: "text-purple-400" },
+                    { q: "Trastuzumab deruxtecan in HER2-low metastatic breast cancer", icon: ShieldCheck, color: "text-cyan-400" }
+                  ].map(({ q, icon: Icon, color }) => (
                     <button
                       key={q}
                       onClick={() => handleSubmit({ message: q })}
-                      className="group flex items-center gap-2 rounded-xl border border-white/8 bg-[#0a0a0a] hover:border-white/20 p-2.5 text-xs transition-all duration-200 text-slate-300 hover:text-white cursor-pointer"
+                      className="group flex items-center gap-3 rounded-2xl border border-white/8 bg-[#0a0a0a] hover:border-cyan-500/30 hover:bg-[#121216] p-3 text-xs transition-all duration-200 text-slate-300 hover:text-white cursor-pointer text-left shadow-sm"
                     >
-                      <Sparkles className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                      <div className="h-7 w-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Icon className={`h-3.5 w-3.5 ${color}`} />
+                      </div>
                       <span className="truncate font-normal">{q}</span>
                     </button>
                   ))}
@@ -453,8 +460,8 @@ export function CuralinkApp() {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-black text-white">
         <div className="flex flex-col items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black font-serif font-bold text-lg animate-pulse">
-            C
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/25 via-blue-500/20 to-indigo-600/30 border border-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/10 animate-pulse">
+            <Sparkles className="h-6 w-6 text-cyan-300" />
           </div>
           <div className="text-center">
             <h2 className="text-base font-serif font-bold text-white">Curalink Enterprise</h2>
@@ -475,7 +482,7 @@ export function CuralinkApp() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         activeId={conversationId}
-        onSelect={setConversationId}
+        onSelect={handleSelectConversation}
         onNew={handleNew}
         items={conversations}
         loading={loadingConversations}
