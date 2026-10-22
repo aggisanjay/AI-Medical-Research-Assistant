@@ -6,7 +6,7 @@ import {
   Activity, ArrowRight, Check, ChevronDown, ChevronRight, 
   Menu, X, Star, Sparkles, Database, Cpu, FileSearch, 
   ShieldCheck, BarChart3, Globe, BookOpen, Layers,
-  ExternalLink, Mail
+  ExternalLink, Mail, Network, Coins
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -305,18 +305,18 @@ export function LandingPage() {
             {[
               {
                 num: "01",
-                title: "Ingest clinical data and records",
-                desc: "Connect your research repositories, uploaded PDF trial data, and EHR documentation securely."
+                title: "Ingest clinical notes & PDF documents",
+                desc: "Upload institutional trial standards, PDF case notes, and clinical records through resilient multi-tier parsing."
               },
               {
                 num: "02",
-                title: "AI synthesizes and scores evidence",
-                desc: "Federated multi-agent pipelines score studies on 100-point recency, methodology, and relevance criteria."
+                title: "Federated literature & Knowledge Graph mapping",
+                desc: "Multi-agent pipelines query live PubMed, OpenAlex, and ClinicalTrials.gov while linking biomedical entities in the Knowledge Graph."
               },
               {
                 num: "03",
-                title: "Generate insights and match trials",
-                desc: "Receive actionable executive synthesis briefs and automatically match qualifying patient cohorts to active clinical trials."
+                title: "Verified synthesis & cost observability",
+                desc: "Receive empirical citation-backed synthesis with full transparency over token consumption and operating spend."
               }
             ].map((step, idx) => (
               <motion.div 
@@ -605,33 +605,33 @@ export function LandingPage() {
             {[
               {
                 icon: Database,
-                title: "Federated Search Indexing",
-                desc: "Queries PubMed, OpenAlex, and ClinicalTrials.gov concurrently with medical synonym resolution."
-              },
-              {
-                icon: Cpu,
-                title: "Multi-Parametric Score Engine",
-                desc: "Custom 100-point algorithm ranking studies on publication recency, methodology, and journal authority."
+                title: "Federated Research Indexing",
+                desc: "Concurrent retrieval across PubMed, OpenAlex, and ClinicalTrials.gov with live query expansion and source links."
               },
               {
                 icon: FileSearch,
-                title: "RAG Contextual Store",
-                desc: "Upload institutional standards or case records to ground synthesis in factual, localized clinical files."
+                title: "Resilient Document RAG",
+                desc: "4-tier PDF/TXT extraction with stream deflation to ground investigations in institutional standards without token limits."
               },
               {
-                icon: Layers,
-                title: "Executive Synthesis Mode",
-                desc: "Generate high-level strategic findings, clinical risks, and next-steps tailored for Principal Investigators."
+                icon: Network,
+                title: "Biomedical Knowledge Graph",
+                desc: "Dynamic entity-relationship graph connecting clinical conditions, drug targets, and treatments with contradiction detection."
+              },
+              {
+                icon: Coins,
+                title: "Real-Time Cost Observability",
+                desc: "Authoritative token tracking, live prompt/completion ledger, and transparent cost savings versus proprietary models."
               },
               {
                 icon: ShieldCheck,
-                title: "HIPAA Compliant Sandbox",
-                desc: "All queries, vector stores, and sessions are encrypted and tenant-isolated via secure Clerk authentication."
+                title: "Clinical Guardrails & Privacy",
+                desc: "Prompt injection scanner and automated regex PII/PHI redaction keeping all patient records tenant-isolated."
               },
               {
-                icon: BarChart3,
-                title: "Observability Pipeline",
-                desc: "Live analytics tracking agent runtimes, query distributions, and historical research metrics in real time."
+                icon: Layers,
+                title: "Evidence Scoring & Verification",
+                desc: "Objective 100-point evidence scoring algorithm evaluating study recency, methodology authority, and verified citations."
               }
             ].map((cap, idx) => {
               const Icon = cap.icon;
