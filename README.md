@@ -1,4 +1,4 @@
-# CuraLink — Agentic AI Medical Research Platform (v2.0)
+# CuraLink — Agentic AI Medical Research Platform 
 
 > Multi-Agent Biomedical Intelligence, Dynamic Knowledge Graph, Resilient Document RAG, and Real-Time Token Observability
 
