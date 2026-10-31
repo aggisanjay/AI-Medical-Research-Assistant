@@ -10,8 +10,9 @@ import {
   Microscope, Zap, Lock, CheckCircle2, FlaskConical, Stethoscope
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BiomedicalMotionBackground } from "./BiomedicalMotionBackground";
 
-// Easing presets based on MotionSites craft standard
+// Easing presets based on MotionSites & Linear craft standard
 const easeOutExpo = [0.16, 1, 0.3, 1] as const;
 
 export function LandingPage() {
@@ -21,13 +22,11 @@ export function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [annualBilling, setAnnualBilling] = useState(true);
   const [resourcesOpen, setResourcesOpen] = useState(false);
-  const [videoLoaded, setVideoLoaded] = useState(false);
   
   // Interactive research demo state
   const [activeQueryIndex, setActiveQueryIndex] = useState(0);
-  const [activeProcessTab, setActiveProcessTab] = useState(0);
 
-  // 3D tilt tracking for hero dashboard mockup
+  // 3D perspective tracking for dashboard showcase
   const dashboardCardRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -84,7 +83,7 @@ export function LandingPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Demo research queries for interactive playground
+  // Demo research queries for interactive playground (inspired by Cursor & Perplexity timeline models)
   const clinicalQueries = [
     {
       title: "PD-1 Checkpoint Inhibitors in Metastatic Melanoma",
@@ -93,9 +92,9 @@ export function LandingPage() {
       confidence: "98.2%",
       evidenceScore: "96 / 100",
       agents: [
-        { name: "PubMed Retriever", status: "Indexed 14,280 papers", done: true },
-        { name: "Entity Extractor", status: "Mapped Nivolumab + Ipilimumab pathways", done: true },
-        { name: "Trial Matcher", status: "Found 18 recruiting phase III trials", done: true },
+        { name: "PubMed Retriever", stage: "READING", status: "Indexed 14,280 papers across NIH", done: true },
+        { name: "Entity Extractor", stage: "MAPPING", status: "Mapped Nivolumab + Ipilimumab pathways", done: true },
+        { name: "Trial Matcher", stage: "EVALUATING", status: "Found 18 recruiting phase III trials", done: true },
       ],
       synthesis: "Concurrent PD-1 and CTLA-4 blockade demonstrates significant overall survival advantage (hazard ratio 0.52) in BRAF-mutant metastatic melanoma, with 5-year survival rates exceeding 52% in empirical Phase III cohorts (CheckMate 067).",
       citations: ["N Engl J Med 2024; 391:112-124", "Lancet Oncol 2024; 25:89-98", "J Clin Oncol 2024; 42:301-314"]
@@ -107,9 +106,9 @@ export function LandingPage() {
       confidence: "96.7%",
       evidenceScore: "94 / 100",
       agents: [
-        { name: "OpenAlex Extractor", status: "Filtered 8,420 citations", done: true },
-        { name: "Knowledge Graph", status: "Linked Sotorasib & Adagrasib resistance loci", done: true },
-        { name: "Synthesis Engine", status: "Contradiction scanner cleared 0 issues", done: true },
+        { name: "OpenAlex Extractor", stage: "READING", status: "Filtered 8,420 citations & impact factors", done: true },
+        { name: "Knowledge Graph", stage: "MAPPING", status: "Linked Sotorasib & Adagrasib resistance loci", done: true },
+        { name: "Synthesis Engine", stage: "SYNTHESIZING", status: "Contradiction scanner cleared 0 conflicts", done: true },
       ],
       synthesis: "Direct KRAS G12C covalent inhibitors achieve 37.1% objective response rate in pretreated advanced NSCLC. Emerging combination therapies targeting secondary MET amplification mitigate acquired resistance pathways.",
       citations: ["Nature Med 2024; 30:450-462", "J Thorac Oncol 2024; 19:612-625", "Cancer Discov 2024; 14:188-201"]
@@ -121,9 +120,9 @@ export function LandingPage() {
       confidence: "99.1%",
       evidenceScore: "97 / 100",
       agents: [
-        { name: "ClinicalTrials.gov", status: "Synthesized 42 pediatric registries", done: true },
-        { name: "Genomic Parser", status: "CD19 & CD22 tandem CAR antigen targets", done: true },
-        { name: "Evidence Scorer", status: "Longitudinal cohort weight: 0.94", done: true },
+        { name: "ClinicalTrials.gov", stage: "MATCHING", status: "Synthesized 42 pediatric registries", done: true },
+        { name: "Genomic Parser", stage: "MAPPING", status: "CD19 & CD22 tandem CAR antigen targets", done: true },
+        { name: "Evidence Scorer", stage: "EVALUATING", status: "Longitudinal cohort weight: 0.94", done: true },
       ],
       synthesis: "Humanized CD19/CD22 dual-target CAR-T constructs reduce CD19-negative escape relapses, achieving complete remission in 86% of refractory pediatric patients with persistence exceeding 24 months.",
       citations: ["Blood 2024; 143:1012-1025", "Leukemia 2024; 38:521-534", "Biol Blood Marrow 2024; 30:77-89"]
@@ -131,9 +130,9 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#050505] text-slate-100 font-sans selection:bg-blue-600/30 selection:text-blue-100 overflow-x-hidden relative">
+    <div className="min-h-screen bg-[#020203] text-slate-100 font-sans selection:bg-blue-600/30 selection:text-blue-100 overflow-x-hidden relative">
       
-      {/* Film grain noise overlay to eliminate video/gradient banding */}
+      {/* Film grain noise overlay to eliminate banding and unify UI materials */}
       <div className="grain-overlay" aria-hidden="true" />
 
       {/* 1. FLOATING LIQUID-GLASS NAVIGATION PILL */}
@@ -143,8 +142,8 @@ export function LandingPage() {
           {/* Main Floating Island */}
           <div className={`w-full flex items-center justify-between rounded-full px-5 py-3 transition-all duration-300 ${
             scrolled 
-              ? "bg-black/85 backdrop-blur-xl border border-white/12 shadow-[0_12px_40px_rgba(0,0,0,0.7)]" 
-              : "bg-black/60 backdrop-blur-lg border border-white/8 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+              ? "bg-[#050508]/85 backdrop-blur-xl border border-white/12 shadow-[0_12px_40px_rgba(0,0,0,0.8)]" 
+              : "bg-[#050508]/60 backdrop-blur-lg border border-white/8 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
           }`}>
             
             {/* Brand Logo & Live Status */}
@@ -227,7 +226,7 @@ export function LandingPage() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.96 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute top-full left-0 mt-3 w-52 rounded-2xl bg-[#0e0e0e]/95 backdrop-blur-xl border border-white/12 p-2 shadow-2xl z-50 text-left"
+                      className="absolute top-full left-0 mt-3 w-52 rounded-2xl bg-[#0e0e12]/95 backdrop-blur-xl border border-white/12 p-2 shadow-2xl z-50 text-left"
                     >
                       <a 
                         href="#process" 
@@ -324,7 +323,7 @@ export function LandingPage() {
               initial={{ opacity: 0, y: -10, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
-              className="lg:hidden max-w-6xl mx-auto mt-2 rounded-3xl bg-[#0a0a0a]/95 backdrop-blur-2xl border border-white/12 p-6 shadow-2xl pointer-events-auto space-y-5"
+              className="lg:hidden max-w-6xl mx-auto mt-2 rounded-3xl bg-[#08080c]/95 backdrop-blur-2xl border border-white/12 p-6 shadow-2xl pointer-events-auto space-y-5"
             >
               <div className="flex flex-col gap-3 text-sm font-medium text-slate-300">
                 <a href="#platform" onClick={(e) => handleScrollTo(e, "platform")} className="py-1 hover:text-white">Platform</a>
@@ -366,33 +365,11 @@ export function LandingPage() {
         </AnimatePresence>
       </header>
 
-      {/* 2. FULL-BLEED CINEMATIC HERO SECTION */}
+      {/* 2. FULL-BLEED PROCEDURAL 3D BIOMEDICAL MOTION HERO SECTION */}
       <section className="relative min-h-[100svh] flex flex-col justify-center items-center pt-32 pb-24 px-6 overflow-hidden">
         
-        {/* Full-bleed Hyperframes Looping Background Video */}
-        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none select-none z-0">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            onLoadedData={() => setVideoLoaded(true)}
-            className={`w-full h-full object-cover object-center transition-all duration-1000 ease-out ${
-              videoLoaded ? "opacity-45 scale-100" : "opacity-0 scale-105"
-            }`}
-          >
-            <source 
-              src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260808_112712_da9d53df-6d27-4b12-bdf6-aa9dc2622bdf.mp4" 
-              type="video/mp4" 
-            />
-          </video>
-
-          {/* Deep Film Scrims: Edge-blends preserving contrast and text readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/90 via-[#050505]/40 to-[#050505]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#050505_90%)]" />
-          <div className="hero-glow absolute inset-0 pointer-events-none" />
-        </div>
+        {/* Crystal Clear Procedural Motion Background (60 FPS GPU-accelerated Interactive Canvas) */}
+        <BiomedicalMotionBackground />
 
         {/* Hero Foreground Content */}
         <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8">
@@ -424,7 +401,7 @@ export function LandingPage() {
           >
             <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[84px] font-sans font-extrabold text-white tracking-[-0.035em] leading-[1.02] max-w-4xl mx-auto">
               Accelerate clinical discovery with{" "}
-              <span className="font-serif italic font-normal text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-white to-blue-300 inline-block drop-shadow-[0_0_35px_rgba(255,255,255,0.3)]">
+              <span className="font-serif italic font-normal text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-indigo-100 to-blue-300 inline-block drop-shadow-[0_0_35px_rgba(255,255,255,0.3)]">
                 empirical precision.
               </span>
             </h1>
@@ -548,7 +525,7 @@ export function LandingPage() {
               </div>
 
               {/* Main Dashboard Preview Image */}
-              <div className="overflow-hidden rounded-2xl bg-[#090909] relative">
+              <div className="overflow-hidden rounded-2xl bg-[#07070a] relative">
                 <img 
                   src="/images/hero_dashboard.png" 
                   alt="Curalink Evidence Analytics Dashboard Overview"
@@ -563,7 +540,7 @@ export function LandingPage() {
       </section>
 
       {/* 3. INTERACTIVE RESEARCH PLAYGROUND ("SHOW, DON'T TELL") */}
-      <section id="playground" className="py-24 px-6 bg-[#080808] border-y border-white/8 relative">
+      <section id="playground" className="py-24 px-6 bg-[#040407] border-y border-white/8 relative">
         <div className="max-w-6xl mx-auto space-y-12">
           
           <div className="text-center space-y-3 max-w-2xl mx-auto">
@@ -631,19 +608,21 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Simulated Multi-Agent Pipeline Status */}
+            {/* Simulated Multi-Agent Pipeline Status (Linear & Cursor timeline style) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {clinicalQueries[activeQueryIndex].agents.map((agent, i) => (
                 <div 
                   key={i} 
-                  className="p-3.5 rounded-2xl bg-black/40 border border-white/8 space-y-1.5"
+                  className="p-3.5 rounded-2xl bg-black/40 border border-white/8 space-y-2"
                 >
                   <div className="flex items-center justify-between text-xs font-medium text-white">
                     <span className="flex items-center gap-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />
                       {agent.name}
                     </span>
-                    <span className="text-[10px] text-emerald-400 font-mono">COMPLETE</span>
+                    <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300 uppercase">
+                      {agent.stage}
+                    </span>
                   </div>
                   <div className="text-[11px] text-slate-400 font-normal truncate">
                     {agent.status}
@@ -682,7 +661,7 @@ export function LandingPage() {
       </section>
 
       {/* 4. PIPELINE ARCHITECTURE (3-Step Process) */}
-      <section id="process" className="py-24 px-6 bg-[#050505] border-b border-white/8">
+      <section id="process" className="py-24 px-6 bg-[#020203] border-b border-white/8">
         <div className="max-w-6xl mx-auto space-y-16">
           
           <motion.div 
@@ -770,7 +749,7 @@ export function LandingPage() {
       {/* 5. ALTERNATING FEATURE DEEP-DIVES */}
 
       {/* Feature 1: Clinical Analysis */}
-      <section id="platform" className="py-24 px-6 bg-[#080808] border-b border-white/8 relative">
+      <section id="platform" className="py-24 px-6 bg-[#040407] border-b border-white/8 relative">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             
@@ -853,7 +832,7 @@ export function LandingPage() {
       </section>
 
       {/* Feature 2: Publication Synthesis */}
-      <section id="features" className="py-24 px-6 bg-[#050505] border-b border-white/8">
+      <section id="features" className="py-24 px-6 bg-[#020203] border-b border-white/8">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             
@@ -936,7 +915,7 @@ export function LandingPage() {
       </section>
 
       {/* Feature 3: Trial Matching */}
-      <section id="matching" className="py-24 px-6 bg-[#080808] border-b border-white/8">
+      <section id="matching" className="py-24 px-6 bg-[#040407] border-b border-white/8">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             
@@ -1019,7 +998,7 @@ export function LandingPage() {
       </section>
 
       {/* 6. CAPABILITIES GRID */}
-      <section id="capabilities" className="py-24 px-6 bg-[#050505] border-b border-white/8">
+      <section id="capabilities" className="py-24 px-6 bg-[#020203] border-b border-white/8">
         <div className="max-w-6xl mx-auto space-y-16">
           
           <motion.div 
@@ -1106,7 +1085,7 @@ export function LandingPage() {
       </section>
 
       {/* 7. MEASURABLE OUTCOMES (STATS) */}
-      <section id="impact" className="py-24 px-6 bg-[#080808] border-b border-white/8">
+      <section id="impact" className="py-24 px-6 bg-[#040407] border-b border-white/8">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             
@@ -1169,7 +1148,7 @@ export function LandingPage() {
       </section>
 
       {/* 8. TESTIMONIAL */}
-      <section className="py-24 px-6 bg-[#050505] border-b border-white/8">
+      <section className="py-24 px-6 bg-[#020203] border-b border-white/8">
         <div className="max-w-6xl mx-auto">
           <div className="liquid-glass-card p-8 sm:p-12 border border-white/12">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
@@ -1230,7 +1209,7 @@ export function LandingPage() {
       </section>
 
       {/* 9. PRICING SECTION */}
-      <section id="pricing" className="py-24 px-6 bg-[#080808] border-b border-white/8">
+      <section id="pricing" className="py-24 px-6 bg-[#040407] border-b border-white/8">
         <div className="max-w-6xl mx-auto space-y-16">
           
           <motion.div 
@@ -1431,7 +1410,7 @@ export function LandingPage() {
       </section>
 
       {/* 10. BLOG / INSIGHTS */}
-      <section id="insights" className="py-24 px-6 bg-[#050505] border-b border-white/8">
+      <section id="insights" className="py-24 px-6 bg-[#020203] border-b border-white/8">
         <div className="max-w-6xl mx-auto space-y-16">
           
           <motion.div 
@@ -1521,7 +1500,7 @@ export function LandingPage() {
       </section>
 
       {/* 11. CINEMATIC FOOTER */}
-      <footer className="py-20 px-6 bg-[#030303] text-slate-400 text-xs relative">
+      <footer className="py-20 px-6 bg-[#010102] text-slate-400 text-xs relative">
         <div className="max-w-6xl mx-auto space-y-16">
           
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
