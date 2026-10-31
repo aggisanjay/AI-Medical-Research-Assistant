@@ -204,3 +204,4 @@ export function BiomedicalMotionBackground({ className = "" }: { className?: str
     </div>
   );
 }
+

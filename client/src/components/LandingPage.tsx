@@ -7,12 +7,13 @@ import {
   Menu, X, Star, Sparkles, Database, Cpu, FileSearch, 
   ShieldCheck, BarChart3, Globe, BookOpen, Layers,
   ExternalLink, Mail, Network, Coins, Play, Search, Dna,
-  Microscope, Zap, Lock, CheckCircle2, FlaskConical, Stethoscope
+  Microscope, Zap, Lock, CheckCircle2, FlaskConical, Stethoscope,
+  Terminal, ShieldAlert, Sliders, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BiomedicalMotionBackground } from "./BiomedicalMotionBackground";
 
-// Easing presets based on MotionSites & Linear craft standard
+// Easing presets based on MotionSites & transitions.dev standard
 const easeOutExpo = [0.16, 1, 0.3, 1] as const;
 
 export function LandingPage() {
@@ -21,10 +22,18 @@ export function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [annualBilling, setAnnualBilling] = useState(true);
+
+  // transitions.dev: Menu Dropdown state orchestration
   const [resourcesOpen, setResourcesOpen] = useState(false);
-  
-  // Interactive research demo state
+  const [resourcesClosing, setResourcesClosing] = useState(false);
+
+  // transitions.dev: Modal Open / Close state orchestration
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalClosing, setIsModalClosing] = useState(false);
+
+  // transitions.dev: Panel Reveal state orchestration
   const [activeQueryIndex, setActiveQueryIndex] = useState(0);
+  const [panelOpen, setPanelOpen] = useState(true);
 
   // 3D perspective tracking for dashboard showcase
   const dashboardCardRef = useRef<HTMLDivElement>(null);
@@ -50,6 +59,48 @@ export function LandingPage() {
     setMousePos({ x: 0, y: 0 });
   };
 
+  // transitions.dev: Menu Dropdown open/close handler with timer cleanup
+  const toggleResourcesDropdown = () => {
+    if (resourcesOpen) {
+      setResourcesOpen(false);
+      setResourcesClosing(true);
+      setTimeout(() => setResourcesClosing(false), 150); // --dropdown-close-dur
+    } else {
+      setResourcesClosing(false);
+      setResourcesOpen(true);
+    }
+  };
+
+  const closeResourcesDropdown = () => {
+    if (resourcesOpen) {
+      setResourcesOpen(false);
+      setResourcesClosing(true);
+      setTimeout(() => setResourcesClosing(false), 150);
+    }
+  };
+
+  // transitions.dev: Modal open/close handler with timer cleanup
+  const openProtocolModal = () => {
+    setIsModalClosing(false);
+    setIsModalOpen(true);
+  };
+
+  const closeProtocolModal = () => {
+    setIsModalOpen(false);
+    setIsModalClosing(true);
+    setTimeout(() => setIsModalClosing(false), 150); // --modal-close-dur
+  };
+
+  // transitions.dev: Panel Reveal tab change handler
+  const handleQueryTabChange = (index: number) => {
+    if (index === activeQueryIndex) return;
+    setPanelOpen(false);
+    setTimeout(() => {
+      setActiveQueryIndex(index);
+      setPanelOpen(true);
+    }, 180);
+  };
+
   const blurRise: Variants = {
     hidden: { opacity: 0, y: 28, filter: "blur(12px)" },
     visible: (custom = 0) => ({ 
@@ -65,12 +116,12 @@ export function LandingPage() {
   };
 
   const fadeIn: Variants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 24 },
     visible: (custom = 0) => ({ 
       opacity: 1, 
       y: 0,
       transition: { 
-        duration: 0.7, 
+        duration: 0.75, 
         delay: custom, 
         ease: easeOutExpo 
       }
@@ -80,10 +131,11 @@ export function LandingPage() {
   const handleScrollTo = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     setMobileMenuOpen(false);
+    closeResourcesDropdown();
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Demo research queries for interactive playground (inspired by Cursor & Perplexity timeline models)
+  // Demo research queries for interactive playground (Cursor & Perplexity timeline models)
   const clinicalQueries = [
     {
       title: "PD-1 Checkpoint Inhibitors in Metastatic Melanoma",
@@ -134,6 +186,127 @@ export function LandingPage() {
       
       {/* Film grain noise overlay to eliminate banding and unify UI materials */}
       <div className="grain-overlay" aria-hidden="true" />
+
+      {/* =========================================================================
+          TRANSITIONS.DEV: MODAL OPEN / CLOSE (Architecture Protocol Dialog)
+          ========================================================================= */}
+      {(isModalOpen || isModalClosing) && (
+        <div 
+          className={`fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md t-modal-backdrop ${
+            isModalOpen ? "is-open" : ""
+          } ${isModalClosing ? "is-closing" : ""}`}
+          onClick={closeProtocolModal}
+        >
+          <div 
+            className={`t-modal w-full max-w-2xl rounded-3xl bg-[#0a0a0e] border border-white/15 p-6 sm:p-8 shadow-[0_25px_80px_rgba(0,0,0,0.9)] space-y-6 ${
+              isModalOpen ? "is-open" : ""
+            } ${isModalClosing ? "is-closing" : ""}`}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-400">
+                  <Terminal className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-serif font-bold text-white">
+                    Multi-Agent Protocol Specification
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Real-time execution telemetry and cryptographic pipeline isolation
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={closeProtocolModal}
+                className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Technical Body */}
+            <div className="space-y-4 text-xs font-mono">
+              <div className="p-3.5 rounded-2xl bg-black/60 border border-white/8 space-y-2">
+                <div className="text-slate-400 uppercase tracking-widest text-[10px] font-semibold flex items-center justify-between">
+                  <span>PIPELINE ORCHESTRATION</span>
+                  <span className="text-emerald-400">STATUS: CONVERGED</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+                    <span className="text-slate-500 block text-[9px]">L1 INGEST</span>
+                    <span className="text-white font-semibold">Stream Deflation</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+                    <span className="text-slate-500 block text-[9px]">L2 GRAPH</span>
+                    <span className="text-white font-semibold">PubMed & OpenAlex</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+                    <span className="text-slate-500 block text-[9px]">L3 SCORING</span>
+                    <span className="text-white font-semibold">100-pt Weighted</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+                    <span className="text-slate-500 block text-[9px]">L4 SECURITY</span>
+                    <span className="text-white font-semibold">HIPAA Enclave</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Latency & Safety Ledger */}
+              <div className="space-y-2">
+                <div className="text-[11px] text-slate-300 font-sans font-semibold">
+                  Audited Governance Parameters
+                </div>
+                <div className="space-y-1.5 text-[11px] text-slate-400 font-sans">
+                  <div className="flex items-center justify-between py-1 border-b border-white/5">
+                    <span>Cryptographic Tenant Isolation:</span>
+                    <span className="text-emerald-400 font-mono">AES-256 GCM Ephemeral</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-white/5">
+                    <span>PHI/PII Automated Redaction:</span>
+                    <span className="text-emerald-400 font-mono">100% Pre-Inference Regex + NER</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-white/5">
+                    <span>Target Time To First Token (TTFT):</span>
+                    <span className="text-white font-mono">&lt; 420ms</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1 border-b border-white/5">
+                    <span>Citation Hallucination Threshold:</span>
+                    <span className="text-emerald-400 font-mono">0.00% (Strict DOI Binding)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={closeProtocolModal}
+                className="rounded-full border-white/15 text-xs"
+              >
+                Close Specification
+              </Button>
+              <Button 
+                size="sm" 
+                variant="white"
+                onClick={() => {
+                  closeProtocolModal();
+                  openSignIn({ forceRedirectUrl: "/dashboard" });
+                }}
+                className="rounded-full text-xs font-semibold"
+              >
+                Launch In Workspace
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1. FLOATING LIQUID-GLASS NAVIGATION PILL */}
       <header className="fixed top-4 inset-x-0 z-50 px-4 sm:px-6 pointer-events-none">
@@ -208,57 +381,62 @@ export function LandingPage() {
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-white transition-all duration-200 group-hover:w-full" />
               </a>
               
-              {/* Resources Dropdown */}
+              {/* =========================================================================
+                  TRANSITIONS.DEV: MENU DROPDOWN (Origin-aware scale + opacity tween)
+                  ========================================================================= */}
               <div className="relative">
                 <button 
-                  onClick={() => setResourcesOpen(!resourcesOpen)}
-                  onBlur={() => setTimeout(() => setResourcesOpen(false), 200)}
+                  onClick={toggleResourcesDropdown}
+                  onBlur={() => setTimeout(closeResourcesDropdown, 200)}
                   className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer py-1"
                 >
                   <span>Resources</span>
                   <ChevronDown className={`h-3 w-3 opacity-60 transition-transform duration-200 ${resourcesOpen ? "rotate-180" : ""}`} />
                 </button>
 
-                <AnimatePresence>
-                  {resourcesOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.96 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute top-full left-0 mt-3 w-52 rounded-2xl bg-[#0e0e12]/95 backdrop-blur-xl border border-white/12 p-2 shadow-2xl z-50 text-left"
+                {(resourcesOpen || resourcesClosing) && (
+                  <div 
+                    className={`t-dropdown absolute top-full left-0 mt-3 w-56 rounded-2xl bg-[#0e0e12]/95 backdrop-blur-xl border border-white/12 p-2 shadow-2xl z-50 text-left ${
+                      resourcesOpen ? "is-open" : ""
+                    } ${resourcesClosing ? "is-closing" : ""}`}
+                    data-origin="top-center"
+                  >
+                    <a 
+                      href="#process" 
+                      onClick={(e) => handleScrollTo(e, "process")}
+                      className="block px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
                     >
-                      <a 
-                        href="#process" 
-                        onClick={(e) => handleScrollTo(e, "process")}
-                        className="block px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        Pipeline Architecture
-                      </a>
-                      <a 
-                        href="#capabilities" 
-                        onClick={(e) => handleScrollTo(e, "capabilities")}
-                        className="block px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        Enterprise Capabilities
-                      </a>
-                      <a 
-                        href="#impact" 
-                        onClick={(e) => handleScrollTo(e, "impact")}
-                        className="block px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        Investigator Metrics
-                      </a>
-                      <a 
-                        href="#insights" 
-                        onClick={(e) => handleScrollTo(e, "insights")}
-                        className="block px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        Clinical Journal & Insights
-                      </a>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      Pipeline Architecture
+                    </a>
+                    <a 
+                      href="#capabilities" 
+                      onClick={(e) => handleScrollTo(e, "capabilities")}
+                      className="block px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      Enterprise Capabilities
+                    </a>
+                    <a 
+                      href="#impact" 
+                      onClick={(e) => handleScrollTo(e, "impact")}
+                      className="block px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      Investigator Metrics
+                    </a>
+                    <button
+                      onClick={openProtocolModal}
+                      className="w-full text-left block px-3 py-2 rounded-xl text-xs text-blue-400 hover:text-blue-300 hover:bg-white/5 transition-colors font-medium cursor-pointer"
+                    >
+                      Protocol Specification (Modal)
+                    </button>
+                    <a 
+                      href="#insights" 
+                      onClick={(e) => handleScrollTo(e, "insights")}
+                      className="block px-3 py-2 rounded-xl text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      Clinical Journal & Insights
+                    </a>
+                  </div>
+                )}
               </div>
             </nav>
 
@@ -316,7 +494,7 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* Mobile Slide-Down Menu */}
+        {/* Mobile Slide-Down Menu (using transitions.dev dropdown mechanics) */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div 
@@ -380,15 +558,14 @@ export function LandingPage() {
             animate="visible"
             custom={0.1}
             variants={blurRise}
-            className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full liquid-glass-subtle text-xs text-slate-300 mx-auto border border-white/15"
+            className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full liquid-glass-subtle text-xs text-slate-300 mx-auto border border-white/15 cursor-pointer hover:border-white/30 transition-colors"
+            onClick={openProtocolModal}
           >
             <span className="flex h-2 w-2 rounded-full bg-blue-400 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
             </span>
-            <span className="font-semibold text-white tracking-wide uppercase text-[10px]">Version 2.4</span>
-            <span className="text-slate-500">•</span>
-            <span className="text-slate-300 font-normal">Autonomous Clinical Evidence Synthesis</span>
-            <ChevronRight className="h-3 w-3 text-slate-400" />
+            <span className="text-slate-200 font-medium">Autonomous Clinical Evidence Synthesis</span>
+            <Eye className="h-3 w-3 text-blue-400 ml-0.5" />
           </motion.div>
 
           {/* Main Title: High-Contrast Serif & Grotesk Choreography */}
@@ -451,16 +628,15 @@ export function LandingPage() {
               </Button>
             )}
 
-            <a href="#playground" onClick={(e) => handleScrollTo(e, "playground")}>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="rounded-full px-7 h-12 text-sm font-medium border-white/20 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:border-white/30 text-white transition-all duration-200 group"
-              >
-                <Play className="h-3.5 w-3.5 mr-2 text-blue-400 fill-blue-400 group-hover:scale-110 transition-transform" />
-                <span>Test Live Queries</span>
-              </Button>
-            </a>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={openProtocolModal}
+              className="rounded-full px-7 h-12 text-sm font-medium border-white/20 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:border-white/30 text-white transition-all duration-200 group cursor-pointer"
+            >
+              <Terminal className="h-3.5 w-3.5 mr-2 text-blue-400 group-hover:scale-110 transition-transform" />
+              <span>Inspect Architecture Spec</span>
+            </Button>
           </motion.div>
 
           {/* Social Proof & Trust Cluster */}
@@ -539,11 +715,19 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* 3. INTERACTIVE RESEARCH PLAYGROUND ("SHOW, DON'T TELL") */}
+      {/* =========================================================================
+          3. INTERACTIVE EVIDENCE ENGINE WITH TRANSITIONS.DEV PANEL REVEAL
+          ========================================================================= */}
       <section id="playground" className="py-24 px-6 bg-[#040407] border-y border-white/8 relative">
         <div className="max-w-6xl mx-auto space-y-12">
           
-          <div className="text-center space-y-3 max-w-2xl mx-auto">
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-60px" }}
+            variants={fadeIn}
+            className="text-center space-y-3 max-w-2xl mx-auto"
+          >
             <span className="text-xs font-semibold uppercase tracking-widest text-blue-400">
               Interactive Evidence Engine
             </span>
@@ -551,16 +735,16 @@ export function LandingPage() {
               Test live clinical synthesis
             </h2>
             <p className="text-sm sm:text-base text-slate-400 font-normal leading-relaxed">
-              Select a clinical investigation scenario to watch Curalink's multi-agent pipeline retrieve, cross-evaluate, and synthesize empirical findings.
+              Select a clinical investigation scenario to observe Curalink's multi-agent pipeline retrieve, cross-evaluate, and synthesize empirical findings.
             </p>
-          </div>
+          </motion.div>
 
           {/* Scenario Selector Pills */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
             {clinicalQueries.map((item, idx) => (
               <button
                 key={idx}
-                onClick={() => setActiveQueryIndex(idx)}
+                onClick={() => handleQueryTabChange(idx)}
                 className={`px-4 sm:px-5 py-2.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer flex items-center gap-2 ${
                   activeQueryIndex === idx
                     ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-102"
@@ -573,89 +757,96 @@ export function LandingPage() {
             ))}
           </div>
 
-          {/* Interactive Simulation Display Card */}
-          <motion.div 
-            key={activeQueryIndex}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: easeOutExpo }}
-            className="liquid-glass-card p-6 sm:p-8 space-y-6 max-w-4xl mx-auto border border-white/12"
-          >
-            {/* Header info */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/8">
-              <div>
-                <span className="text-[11px] uppercase font-semibold text-blue-400 tracking-wider">
-                  {clinicalQueries[activeQueryIndex].category}
-                </span>
-                <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
-                  {clinicalQueries[activeQueryIndex].title}
-                </h3>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-xs text-slate-400 font-normal">Evidence Score</div>
-                  <div className="text-lg font-serif font-bold text-emerald-400">
-                    {clinicalQueries[activeQueryIndex].evidenceScore}
+          {/* transitions.dev: Panel Reveal Container */}
+          <div className="max-w-4xl mx-auto overflow-hidden">
+            <div 
+              className="t-panel-slide liquid-glass-card p-6 sm:p-8 space-y-6 border border-white/12"
+              data-open={panelOpen ? "true" : "false"}
+            >
+              {/* Header info */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/8">
+                <div>
+                  <span className="text-[11px] uppercase font-semibold text-blue-400 tracking-wider">
+                    {clinicalQueries[activeQueryIndex].category}
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
+                    {clinicalQueries[activeQueryIndex].title}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 font-normal">Evidence Score</div>
+                    <div className="text-lg font-serif font-bold text-emerald-400">
+                      {clinicalQueries[activeQueryIndex].evidenceScore}
+                    </div>
+                  </div>
+                  <div className="h-8 w-px bg-white/10 hidden sm:block" />
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 font-normal">Latency</div>
+                    <div className="text-xs font-mono font-medium text-slate-300 bg-white/5 px-2 py-1 rounded-md border border-white/10">
+                      {clinicalQueries[activeQueryIndex].time}
+                    </div>
                   </div>
                 </div>
-                <div className="h-8 w-px bg-white/10 hidden sm:block" />
-                <div className="text-right">
-                  <div className="text-xs text-slate-400 font-normal">Latency</div>
-                  <div className="text-xs font-mono font-medium text-slate-300 bg-white/5 px-2 py-1 rounded-md border border-white/10">
-                    {clinicalQueries[activeQueryIndex].time}
-                  </div>
-                </div>
               </div>
-            </div>
 
-            {/* Simulated Multi-Agent Pipeline Status (Linear & Cursor timeline style) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {clinicalQueries[activeQueryIndex].agents.map((agent, i) => (
-                <div 
-                  key={i} 
-                  className="p-3.5 rounded-2xl bg-black/40 border border-white/8 space-y-2"
-                >
-                  <div className="flex items-center justify-between text-xs font-medium text-white">
-                    <span className="flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />
-                      {agent.name}
+              {/* Simulated Multi-Agent Pipeline Status (Linear & Cursor timeline style) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {clinicalQueries[activeQueryIndex].agents.map((agent, i) => (
+                  <div 
+                    key={i} 
+                    className="p-3.5 rounded-2xl bg-black/40 border border-white/8 space-y-2"
+                  >
+                    <div className="flex items-center justify-between text-xs font-medium text-white">
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />
+                        {agent.name}
+                      </span>
+                      <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300 uppercase">
+                        {agent.stage}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-normal truncate">
+                      {agent.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Synthesized Executive Summary */}
+              <div className="space-y-3 pt-2">
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+                  <span>Empirical Synthesis Result</span>
+                </div>
+                <blockquote className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/8 text-sm sm:text-base text-slate-200 leading-relaxed font-sans font-normal italic">
+                  “{clinicalQueries[activeQueryIndex].synthesis}”
+                </blockquote>
+              </div>
+
+              {/* Source Citations */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs text-slate-400">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-slate-300">Verified Citations:</span>
+                  {clinicalQueries[activeQueryIndex].citations.map((cite, i) => (
+                    <span 
+                      key={i} 
+                      className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300 font-mono flex items-center gap-1 hover:border-white/30 transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                      {cite}
                     </span>
-                    <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300 uppercase">
-                      {agent.stage}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-normal truncate">
-                    {agent.status}
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            {/* Synthesized Executive Summary */}
-            <div className="space-y-3 pt-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-                <span>Empirical Synthesis Result</span>
-              </div>
-              <blockquote className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/8 text-sm sm:text-base text-slate-200 leading-relaxed font-sans font-normal italic">
-                “{clinicalQueries[activeQueryIndex].synthesis}”
-              </blockquote>
-            </div>
-
-            {/* Source Citations */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">Verified Citations:</span>
-              {clinicalQueries[activeQueryIndex].citations.map((cite, i) => (
-                <span 
-                  key={i} 
-                  className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-300 font-mono flex items-center gap-1 hover:border-white/30 transition-colors cursor-pointer"
+                <button 
+                  onClick={openProtocolModal}
+                  className="text-blue-400 hover:text-blue-300 text-xs font-medium underline underline-offset-4 cursor-pointer"
                 >
-                  <ExternalLink className="h-2.5 w-2.5 opacity-60" />
-                  {cite}
-                </span>
-              ))}
+                  Inspect Agent Trace →
+                </button>
+              </div>
             </div>
-          </motion.div>
+          </div>
 
         </div>
       </section>
@@ -667,7 +858,7 @@ export function LandingPage() {
           <motion.div 
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-60px" }}
             variants={fadeIn}
             className="text-center space-y-3 max-w-2xl mx-auto"
           >
@@ -682,7 +873,7 @@ export function LandingPage() {
             </p>
           </motion.div>
 
-          {/* 3-Column Process Steps */}
+          {/* 3-Column Process Steps with transitions */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
@@ -713,7 +904,7 @@ export function LandingPage() {
                   key={idx}
                   initial="hidden"
                   whileInView="visible"
-                  viewport={{ once: true }}
+                  viewport={{ once: true, margin: "-60px" }}
                   variants={fadeIn}
                   custom={idx * 0.15}
                   className="liquid-glass-card p-8 space-y-5 group relative"
@@ -756,7 +947,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="space-y-6"
             >
@@ -802,21 +993,20 @@ export function LandingPage() {
                 >
                   Request Access
                 </Button>
-                <a 
-                  href="#capabilities" 
-                  onClick={(e) => handleScrollTo(e, "capabilities")}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+                <button 
+                  onClick={openProtocolModal}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
                 >
-                  <span>Explore Capabilities</span>
+                  <span>Protocol Spec</span>
                   <ChevronRight className="h-3.5 w-3.5" />
-                </a>
+                </button>
               </div>
             </motion.div>
 
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="liquid-glass-card p-3 shadow-2xl overflow-hidden group"
             >
@@ -839,7 +1029,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="liquid-glass-card p-3 shadow-2xl overflow-hidden group order-2 lg:order-1"
             >
@@ -853,7 +1043,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="space-y-6 order-1 lg:order-2"
             >
@@ -922,7 +1112,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="space-y-6"
             >
@@ -982,7 +1172,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="liquid-glass-card p-3 shadow-2xl overflow-hidden group"
             >
@@ -1004,7 +1194,7 @@ export function LandingPage() {
           <motion.div 
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-60px" }}
             variants={fadeIn}
             className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end"
           >
@@ -1062,7 +1252,7 @@ export function LandingPage() {
                   key={idx}
                   initial="hidden"
                   whileInView="visible"
-                  viewport={{ once: true }}
+                  viewport={{ once: true, margin: "-60px" }}
                   variants={fadeIn}
                   custom={idx * 0.1}
                   className="liquid-glass-card p-7 space-y-4 group"
@@ -1092,7 +1282,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="lg:col-span-5 space-y-6"
             >
@@ -1119,7 +1309,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4"
             >
@@ -1156,7 +1346,7 @@ export function LandingPage() {
               <motion.div 
                 initial="hidden"
                 whileInView="visible"
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: "-60px" }}
                 variants={fadeIn}
                 className="lg:col-span-4 overflow-hidden rounded-2xl"
               >
@@ -1170,7 +1360,7 @@ export function LandingPage() {
               <motion.div 
                 initial="hidden"
                 whileInView="visible"
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: "-60px" }}
                 variants={fadeIn}
                 className="lg:col-span-8 space-y-6"
               >
@@ -1215,7 +1405,7 @@ export function LandingPage() {
           <motion.div 
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-60px" }}
             variants={fadeIn}
             className="text-center space-y-4 max-w-2xl mx-auto"
           >
@@ -1261,7 +1451,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="liquid-glass-card p-8 flex flex-col justify-between space-y-8"
             >
@@ -1306,7 +1496,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="liquid-glass-card p-8 flex flex-col justify-between space-y-8 border-blue-500/40 relative shadow-[0_0_50px_rgba(37,99,235,0.15)] scale-102"
             >
@@ -1360,7 +1550,7 @@ export function LandingPage() {
             <motion.div 
               initial="hidden"
               whileInView="visible"
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "-60px" }}
               variants={fadeIn}
               className="liquid-glass-card p-8 flex flex-col justify-between space-y-8"
             >
@@ -1416,7 +1606,7 @@ export function LandingPage() {
           <motion.div 
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-60px" }}
             variants={fadeIn}
             className="text-center space-y-3 max-w-2xl mx-auto"
           >
@@ -1459,7 +1649,7 @@ export function LandingPage() {
                 key={idx}
                 initial="hidden"
                 whileInView="visible"
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: "-60px" }}
                 variants={fadeIn}
                 custom={idx * 0.15}
                 className="liquid-glass-card overflow-hidden group flex flex-col justify-between"
