@@ -1,8 +1,10 @@
+import { Tilt3D } from "./Tilt3D";
 import { ExternalLink, Calendar, Users } from "lucide-react";
 import type { Publication } from "@/lib/api";
 
 export function PublicationCard({ pub }: { pub: Publication }) {
   return (
+    <Tilt3D>
     <a
       href={pub.url}
       target="_blank"
@@ -48,5 +50,6 @@ export function PublicationCard({ pub }: { pub: Publication }) {
         )}
       </div>
     </a>
+    </Tilt3D>
   );
 }

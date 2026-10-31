@@ -1,3 +1,4 @@
+import { Tilt3D } from "./Tilt3D";
 import { ExternalLink, MapPin, FlaskConical, CheckCircle2 } from "lucide-react";
 import type { ClinicalTrial } from "@/lib/api";
 
@@ -5,6 +6,7 @@ export function ClinicalTrialCard({ trial }: { trial: ClinicalTrial }) {
   const locations = trial.locations?.length ? trial.locations : trial.location ? [trial.location] : [];
 
   return (
+    <Tilt3D>
     <a
       href={trial.url}
       target="_blank"
@@ -59,5 +61,6 @@ export function ClinicalTrialCard({ trial }: { trial: ClinicalTrial }) {
         )}
       </div>
     </a>
+    </Tilt3D>
   );
 }

@@ -478,3 +478,31 @@
     transition: none !important;
   }
 }
+
+/* ==========================================================================
+   HyperFrames Cinematic Video & UI Primitives
+   Docs & Repo: https://github.com/heygen-com/hyperframes
+   ========================================================================== */
+
+:root {
+  --hf-vignette-size: 45%;
+  --hf-vignette-color: rgba(2, 2, 3, 0.75);
+}
+
+.hf-vignette-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  background: radial-gradient(
+    ellipse at center,
+    transparent var(--hf-vignette-size),
+    var(--hf-vignette-color) 100%
+  );
+}
+
+/* 3D depth utilities */
+.depth-shadow { box-shadow: 0 30px 60px -20px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06) inset; }
+@media (prefers-reduced-motion: reduce) { [style*="preserve-3d"] { transform: none !important; } }
+
+

@@ -12,11 +12,22 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BiomedicalMotionBackground } from "./BiomedicalMotionBackground";
+import { Scene3D } from "./Scene3D";
+import { Marquee } from "./Marquee";
+import { useLandingMotion } from "@/lib/landingMotion";
+import { 
+  TelemetryHud, 
+  StateChipRail, 
+  CinematicVignette, 
+  SpotlightCard, 
+  TerminalRunner 
+} from "./hyperframes";
 
 // Easing presets based on MotionSites & transitions.dev standard
 const easeOutExpo = [0.16, 1, 0.3, 1] as const;
 
 export function LandingPage() {
+  useLandingMotion();
   const { isSignedIn } = useUser();
   const { openSignIn } = useClerk();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -231,6 +242,9 @@ export function LandingPage() {
 
             {/* Modal Technical Body */}
             <div className="space-y-4 text-xs font-mono">
+              {/* HyperFrames Simulated Terminal Runner */}
+              <TerminalRunner command="curalink protocol verify --target=mesh-consensus --strict-hipaa" />
+
               <div className="p-3.5 rounded-2xl bg-black/60 border border-white/8 space-y-2">
                 <div className="text-slate-400 uppercase tracking-widest text-[10px] font-semibold flex items-center justify-between">
                   <span>PIPELINE ORCHESTRATION</span>
@@ -544,10 +558,19 @@ export function LandingPage() {
       </header>
 
       {/* 2. FULL-BLEED PROCEDURAL 3D BIOMEDICAL MOTION HERO SECTION */}
-      <section className="relative min-h-[100svh] flex flex-col justify-center items-center pt-32 pb-24 px-6 overflow-hidden">
+      <section id="hero" className="relative min-h-[100svh] flex flex-col justify-center items-center pt-32 pb-24 px-6 overflow-hidden">
         
         {/* Crystal Clear Procedural Motion Background (60 FPS GPU-accelerated Interactive Canvas) */}
         <BiomedicalMotionBackground />
+
+        {/* 3D Depth Layer: Floating Source Plates & Rotating DNA Helix */}
+        <Scene3D />
+
+        {/* HyperFrames Cinematic Vignette Overlay */}
+        <CinematicVignette size="46%" color="rgba(2, 2, 3, 0.85)" />
+
+        {/* Subtle center scrim to guarantee pristine contrast on headline typography */}
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[760px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(2,2,3,0.85)_0%,rgba(2,2,3,0.4)_55%,transparent_80%)] pointer-events-none z-[5] blur-xl" aria-hidden="true" />
 
         {/* Hero Foreground Content */}
         <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8">
@@ -668,7 +691,7 @@ export function LandingPage() {
             </div>
           </motion.div>
 
-          {/* 3D PERSPECTIVE MOCKUP SHOWCASE */}
+          {/* 3D PERSPECTIVE MOCKUP SHOWCASE FRAMED WITH HYPERFRAMES TELEMETRY HUD */}
           <motion.div 
             initial="hidden"
             animate="visible"
@@ -676,40 +699,42 @@ export function LandingPage() {
             variants={blurRise}
             className="pt-10 max-w-5xl mx-auto perspective-[1200px]"
           >
-            <div 
-              ref={dashboardCardRef}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-              style={{
-                transform: `rotateY(${mousePos.x * 6}deg) rotateX(${-mousePos.y * 6}deg)`,
-                transition: "transform 0.15s ease-out"
-              }}
-              className="relative rounded-3xl p-2 sm:p-3 liquid-glass-card border border-white/15 shadow-[0_20px_70px_rgba(0,0,0,0.8)] group overflow-hidden"
-            >
-              {/* Subtle top edge specular reflection */}
-              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+            <TelemetryHud>
+              <div 
+                ref={dashboardCardRef}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+                style={{
+                  transform: `rotateY(${mousePos.x * 6}deg) rotateX(${-mousePos.y * 6}deg)`,
+                  transition: "transform 0.15s ease-out"
+                }}
+                className="relative rounded-3xl p-2 sm:p-3 liquid-glass-card border border-white/15 shadow-[0_20px_70px_rgba(0,0,0,0.8)] group overflow-hidden"
+              >
+                {/* Subtle top edge specular reflection */}
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
 
-              {/* Live Telemetry Floating Badges */}
-              <div className="absolute top-6 left-6 z-20 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15 text-[11px] text-white shadow-xl">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-medium">Multi-Agent Consensus: 98.4% Confidence</span>
-              </div>
+                {/* Live Telemetry Floating Badges */}
+                <div className="absolute top-6 left-6 z-20 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15 text-[11px] text-white shadow-xl">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-medium">Multi-Agent Consensus: 98.4% Confidence</span>
+                </div>
 
-              <div className="absolute bottom-6 right-6 z-20 hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15 text-[11px] text-slate-300 shadow-xl">
-                <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
-                <span>Zero PHI Leakage • HIPAA Cryptographic Vault</span>
-              </div>
+                <div className="absolute bottom-6 right-6 z-20 hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15 text-[11px] text-slate-300 shadow-xl">
+                  <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
+                  <span>Zero PHI Leakage • HIPAA Cryptographic Vault</span>
+                </div>
 
-              {/* Main Dashboard Preview Image */}
-              <div className="overflow-hidden rounded-2xl bg-[#07070a] relative">
-                <img 
-                  src="/images/hero_dashboard.png" 
-                  alt="Curalink Evidence Analytics Dashboard Overview"
-                  className="w-full h-auto object-cover max-h-[580px] rounded-2xl transition-transform duration-700 group-hover:scale-[1.01]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                {/* Main Dashboard Preview Image */}
+                <div className="overflow-hidden rounded-2xl bg-[#07070a] relative">
+                  <img 
+                    src="/images/hero_dashboard.png" 
+                    alt="Curalink Evidence Analytics Dashboard Overview"
+                    className="w-full h-auto object-cover max-h-[580px] rounded-2xl transition-transform duration-700 group-hover:scale-[1.01]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                </div>
               </div>
-            </div>
+            </TelemetryHud>
           </motion.div>
 
         </div>
@@ -718,6 +743,8 @@ export function LandingPage() {
       {/* =========================================================================
           3. INTERACTIVE EVIDENCE ENGINE WITH TRANSITIONS.DEV PANEL REVEAL
           ========================================================================= */}
+      <Marquee />
+
       <section id="playground" className="py-24 px-6 bg-[#040407] border-y border-white/8 relative">
         <div className="max-w-6xl mx-auto space-y-12">
           
@@ -755,6 +782,26 @@ export function LandingPage() {
                 <span>{item.title.split(" in ")[0]}</span>
               </button>
             ))}
+          </div>
+
+          {/* HyperFrames State Chip Rail: Multi-Agent Clinical Convergence */}
+          <div className="max-w-4xl mx-auto">
+            <div className="text-[11px] font-mono uppercase text-slate-400 font-semibold mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+                Autonomous Convergence Pipeline
+              </span>
+              <span className="text-slate-500 text-[10px]">Deterministic Multi-Agent State</span>
+            </div>
+            <StateChipRail 
+              activeIdx={3}
+              states={[
+                { id: "s1", label: "PubMed & NIH Ingest", badge: "14.2k Docs", time: "0.4s" },
+                { id: "s2", label: "Knowledge Graph Link", badge: "2,400 Nodes", time: "0.8s" },
+                { id: "s3", label: "Contradiction Scan", badge: "0 Conflicts", time: "1.2s" },
+                { id: "s4", label: "Consensus Synthesis", badge: "Converged", time: "1.4s" }
+              ]}
+            />
           </div>
 
           {/* transitions.dev: Panel Reveal Container */}
@@ -907,28 +954,30 @@ export function LandingPage() {
                   viewport={{ once: true, margin: "-60px" }}
                   variants={fadeIn}
                   custom={idx * 0.15}
-                  className="liquid-glass-card p-8 space-y-5 group relative"
+                  className="h-full"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-3xl font-bold text-slate-600 group-hover:text-blue-400 transition-colors">
-                      {step.num}
-                    </span>
-                    <span className="text-[10px] uppercase font-semibold text-slate-400 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-                      {step.tag}
-                    </span>
-                  </div>
-                  
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white group-hover:border-white/30 group-hover:bg-white/10 transition-all">
-                    <Icon className="h-5 w-5" />
-                  </div>
+                  <SpotlightCard className="p-8 space-y-5 h-full">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-3xl font-bold text-slate-600 group-hover:text-blue-400 transition-colors">
+                        {step.num}
+                      </span>
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                        {step.tag}
+                      </span>
+                    </div>
+                    
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white group-hover:border-white/30 group-hover:bg-white/10 transition-all">
+                      <Icon className="h-5 w-5" />
+                    </div>
 
-                  <h3 className="text-lg font-serif font-bold text-white group-hover:text-blue-200 transition-colors">
-                    {step.title}
-                  </h3>
-                  
-                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
-                    {step.desc}
-                  </p>
+                    <h3 className="text-lg font-serif font-bold text-white group-hover:text-blue-200 transition-colors">
+                      {step.title}
+                    </h3>
+                    
+                    <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-normal">
+                      {step.desc}
+                    </p>
+                  </SpotlightCard>
                 </motion.div>
               );
             })}

@@ -1,3 +1,4 @@
+import { Tilt3D } from "./Tilt3D";
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -91,6 +92,7 @@ export function ExecutiveSummaryCard({ message }: Props) {
   const metrics = extractSourcesMetrics(sections.sourcesUsed);
 
   return (
+    <Tilt3D max={4}>
     <div className="editorial-card border border-white/8 relative overflow-hidden">
       
       {/* Header Panel */}
@@ -220,5 +222,6 @@ export function ExecutiveSummaryCard({ message }: Props) {
         )}
       </div>
     </div>
+    </Tilt3D>
   );
 }
