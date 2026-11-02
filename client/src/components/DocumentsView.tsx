@@ -68,7 +68,7 @@ export function DocumentsView({ onDocumentsChange }: DocumentsViewProps) {
   };
 
   return (
-    <div className="max-w-4xl space-y-6 pb-16">
+    <div className="view-stagger max-w-4xl space-y-6 pb-16">
       <div className="border-b border-white/8 pb-6">
         <h1 className="text-3xl font-serif font-bold text-white tracking-tight">Document Library</h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1 font-normal">

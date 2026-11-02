@@ -30,7 +30,7 @@ export function ObservabilityView() {
   }, []);
 
   return (
-    <div className="space-y-6 animate-fade-in p-6 max-w-7xl mx-auto">
+    <div className="view-stagger space-y-6 animate-fade-in p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/8 pb-5">
         <div>

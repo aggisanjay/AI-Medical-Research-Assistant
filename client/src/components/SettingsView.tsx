@@ -16,7 +16,7 @@ export function SettingsView() {
   };
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="view-stagger space-y-8 pb-16">
       
       {/* Header */}
       <div className="border-b border-white/8 pb-6">

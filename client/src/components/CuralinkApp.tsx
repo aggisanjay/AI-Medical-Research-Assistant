@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { 
   Sparkles, FlaskConical, BookOpen, 
   Globe, Bell, HelpCircle, 
@@ -30,6 +31,7 @@ export function CuralinkApp() {
   const { getToken } = useAuth();
   const { signOut } = useClerk();
 
+  const reduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState("dashboard");
   const userName = user?.fullName || "Dr. Sarah Jenkins";
 
@@ -548,9 +550,18 @@ export function CuralinkApp() {
             "flex-1 min-w-0",
             activeTab === "chat" ? "overflow-hidden flex flex-col" : "overflow-y-auto px-4 sm:px-6 py-6"
           )}>
-            <div className={activeTab === "chat" ? "flex-1 flex flex-col min-h-0" : "max-w-6xl mx-auto"}>
-              {renderContentView()}
-            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeTab}
+                initial={reduceMotion ? false : { opacity: 0, y: 14, filter: "blur(6px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                className={activeTab === "chat" ? "flex-1 flex flex-col min-h-0" : "max-w-6xl mx-auto"}
+              >
+                {renderContentView()}
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </div>

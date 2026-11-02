@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { 
   Plus, MessageSquare, Trash2, Loader2,
   Home, Settings, ChevronLeft, ChevronRight, LogOut, FileText,
@@ -106,12 +107,19 @@ export function Sidebar({
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium tracking-wide transition-all duration-200 relative",
                   isActive 
-                    ? "bg-[#2563EB] text-white shadow-sm" 
+                    ? "text-white" 
                     : "text-slate-400 hover:bg-white/5 hover:text-white"
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
+                {isActive && (
+                  <motion.span
+                    layoutId="curalink-nav-pill"
+                    className="absolute inset-0 rounded-xl bg-[#2563EB] shadow-[0_0_24px_-6px_rgba(37,99,235,0.8)]"
+                    transition={{ type: "spring", stiffness: 420, damping: 38 }}
+                  />
+                )}
+                <Icon className="relative h-4 w-4 shrink-0" />
+                {!isCollapsed && <span className="relative truncate">{item.label}</span>}
               </button>
 
               {isCollapsed && (

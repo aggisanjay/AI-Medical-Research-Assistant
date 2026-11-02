@@ -136,7 +136,7 @@ export function DashboardView({
   ];
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="view-stagger space-y-8 pb-16">
       
       {/* Greeting Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/8 pb-6">
