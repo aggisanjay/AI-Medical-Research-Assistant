@@ -454,7 +454,7 @@ class MultiAgentWorkflowEngine {
       durationMs: totalDurationMs
     });
 
-    await auditService.recordEvent({
+    logger.info({
       workspaceId,
       actorId: userId,
       eventType: 'agent_execution',
@@ -470,7 +470,7 @@ class MultiAgentWorkflowEngine {
         publicationsCount: state.rankedPublications.length,
         trialsCount: state.rankedTrials.length
       }
-    });
+    }, 'Workflow completed successfully');
 
     return {
       response: state.finalReport,
