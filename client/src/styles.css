@@ -51,7 +51,7 @@
 }
 
 :root {
-  --radius: 1.5rem; /* 24px default card radius */
+  --radius: 0.875rem; /* 14px refined desktop card radius */
 
   /* Minimal Editorial Black-and-White SaaS Theme */
   --background: #000000;
@@ -109,6 +109,8 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
     letter-spacing: -0.01em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -532,3 +534,13 @@
 @media (prefers-reduced-motion: reduce) {
   .view-stagger > * { animation: none; }
 }
+
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+
+/* Report lists need visible markers */
+.prose-research ul { list-style: disc; padding-left: 1.4rem; }
+.prose-research ol { list-style: decimal; padding-left: 1.4rem; }
+.prose-research li { margin: 0.35rem 0; }
+.prose-research li::marker { color: rgba(125, 211, 252, 0.8); }

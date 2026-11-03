@@ -1,4 +1,3 @@
-import { Tilt3D } from "./Tilt3D";
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -9,6 +8,8 @@ import {
   FileText
 } from "lucide-react";
 import type { ChatMessage } from "@/lib/api";
+import { Chip } from "@/components/ui/kit";
+import type { LucideIcon } from "lucide-react";
 
 interface Props {
   message: ChatMessage;
@@ -91,137 +92,60 @@ export function ExecutiveSummaryCard({ message }: Props) {
 
   const metrics = extractSourcesMetrics(sections.sourcesUsed);
 
+  const lvlColor = confidenceLevel === "High" ? "#34d399" : confidenceLevel === "Medium" ? "#fbbf24" : "#f87171";
+  const Block = ({ title, icon: Icon, color, items, empty }: { title: string; icon: LucideIcon; color: string; items: string[]; empty: string }) => (
+    <section className="rounded-xl border border-white/10 bg-black/25 p-3.5 sm:p-4">
+      <h3 className="mb-2.5 flex items-center gap-2 text-[13.5px] font-medium text-white">
+        <span className="grid h-7 w-7 place-items-center rounded-md" style={{ background: color + "1c", color }}>
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        {title}
+      </h3>
+      {items.length ? (
+        <ul className="space-y-2">
+          {items.map((b, i) => (
+            <li key={i} className="flex gap-2.5 text-[13px] leading-relaxed text-white/80">
+              <i className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} />
+              <span>{b}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[12.5px] text-white/35">{empty}</p>
+      )}
+    </section>
+  );
+
   return (
-    <Tilt3D max={4}>
-    <div className="editorial-card border border-white/8 relative overflow-hidden">
-      
-      {/* Header Panel */}
-      <div className="px-6 py-5 border-b border-white/8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 flex items-center gap-1 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/10">
-              <ShieldCheck className="h-3 w-3" />
-              Executive Synthesis
-            </span>
-          </div>
-          <h2 className="text-base font-serif font-bold text-white">Executive Briefing</h2>
-        </div>
-
-        {/* Confidence & Sources Summary Indicators */}
-        <div className="flex items-center flex-wrap gap-2.5">
-          {confidenceLevel !== "Unknown" && (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border border-white/10 bg-white/5 text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {confidenceLevel} Confidence
-            </div>
-          )}
-          
-          <div className="flex items-center gap-3 px-3.5 py-1 rounded-full bg-black/60 border border-white/8 text-[11px] text-slate-400 font-normal">
-            <span className="flex items-center gap-1"><Database className="h-3.5 w-3.5 text-white" /> {metrics.sourceCount} Sources</span>
-            <span className="h-3 w-px bg-white/10" />
-            <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-white" /> {metrics.citationCount} Citations</span>
+    <article className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+      <header className="flex flex-col justify-between gap-3 border-b border-white/10 px-4 py-3 sm:flex-row sm:items-center sm:px-5">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-8.5 w-8.5 place-items-center rounded-lg bg-violet-300/12 text-violet-200">
+            <Sparkles className="h-4 w-4" />
+          </span>
+          <div>
+            <h2 className="font-serif text-[18px] font-light leading-none tracking-tight text-white">Executive briefing</h2>
+            <p className="mt-1 text-[12px] text-white/45">Short-form summary of the evidence</p>
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {confidenceLevel !== "Unknown" && <Chip color={lvlColor}>{confidenceLevel} confidence</Chip>}
+          <Chip color="#38bdf8" dot={false}><Database className="h-3 w-3" />{metrics.sourceCount} sources</Chip>
+          <Chip color="#a78bfa" dot={false}><FileText className="h-3 w-3" />{metrics.citationCount} citations</Chip>
+        </div>
+      </header>
+      <div className="grid gap-3 p-4 sm:p-5 md:grid-cols-2">
+        <Block title="Key findings" icon={CheckCircle2} color="#34d399" items={sections.keyFindings} empty="No key findings reported." />
+        <Block title="Recommended actions" icon={ArrowRight} color="#38bdf8" items={sections.recommendedActions} empty="No recommended actions reported." />
+        <Block title="Risks and limitations" icon={AlertTriangle} color="#f87171" items={sections.risks} empty="No specific risks highlighted." />
+        <Block title="Opportunities" icon={Sparkles} color="#a78bfa" items={sections.opportunities} empty="No opportunities highlighted." />
       </div>
-
-      {/* Main Grid Content */}
-      <div className="p-6 space-y-6">
-        
-        {/* Row 1: Key Findings & Recommended Actions */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Key Findings Card */}
-          <div className="rounded-2xl border border-white/8 bg-black/40 p-5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              Key Findings
-            </div>
-            <ul className="space-y-2 text-xs text-slate-300 font-normal leading-relaxed">
-              {sections.keyFindings.length > 0 ? (
-                sections.keyFindings.map((bullet, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-white mt-1 select-none">•</span>
-                    <span>{bullet}</span>
-                  </li>
-                ))
-              ) : (
-                <li className="text-slate-500 italic">No key findings reported.</li>
-              )}
-            </ul>
-          </div>
-
-          {/* Recommended Actions Card */}
-          <div className="rounded-2xl border border-white/8 bg-black/40 p-5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <ArrowRight className="h-4 w-4 text-[#2563EB]" />
-              Recommended Actions
-            </div>
-            <ul className="space-y-2 text-xs text-slate-300 font-normal leading-relaxed">
-              {sections.recommendedActions.length > 0 ? (
-                sections.recommendedActions.map((bullet, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-[#2563EB] mt-1 select-none">→</span>
-                    <span>{bullet}</span>
-                  </li>
-                ))
-              ) : (
-                <li className="text-slate-500 italic">No recommended actions reported.</li>
-              )}
-            </ul>
-          </div>
+      {sections.confidence.length > 0 && (
+        <div className="mx-4 mb-4 rounded-xl border border-white/10 bg-black/25 p-3.5 sm:mx-5 sm:mb-5">
+          <h3 className="mb-1.5 flex items-center gap-2 text-[13.5px] font-medium text-white"><ShieldCheck className="h-3.5 w-3.5 text-emerald-300" /> Confidence assessment</h3>
+          <p className="text-[13px] leading-relaxed text-white/70">{sections.confidence.join(" ")}</p>
         </div>
-
-        {/* Row 2: Risks & Opportunities */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Risks & Gaps Card */}
-          <div className="rounded-2xl border border-white/8 bg-black/40 p-5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-red-400">
-              <AlertTriangle className="h-4 w-4 text-red-400" />
-              Risks & Limitations
-            </div>
-            <ul className="space-y-2 text-xs text-slate-300 font-normal leading-relaxed">
-              {sections.risks.length > 0 ? (
-                sections.risks.map((bullet, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-red-400 mt-1 select-none">•</span>
-                    <span>{bullet}</span>
-                  </li>
-                ))
-              ) : (
-                <li className="text-slate-500 italic">No specific risks highlighted.</li>
-              )}
-            </ul>
-          </div>
-
-          {/* Opportunities Card */}
-          <div className="rounded-2xl border border-white/8 bg-black/40 p-5 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <Sparkles className="h-4 w-4 text-blue-400" />
-              Opportunities
-            </div>
-            <ul className="space-y-2 text-xs text-slate-300 font-normal leading-relaxed">
-              {sections.opportunities.length > 0 ? (
-                sections.opportunities.map((bullet, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-1 select-none">•</span>
-                    <span>{bullet}</span>
-                  </li>
-                ))
-              ) : (
-                <li className="text-slate-500 italic">No opportunities highlighted.</li>
-              )}
-            </ul>
-          </div>
-        </div>
-
-        {/* Confidence Explanation Block */}
-        {sections.confidence.length > 0 && sections.confidence[0] && (
-          <div className="text-[11px] text-slate-500 font-normal pt-2 border-t border-white/8">
-            <span className="font-semibold text-slate-400">Confidence Assessment Justification: </span>
-            {sections.confidence.join(" ")}
-          </div>
-        )}
-      </div>
-    </div>
-    </Tilt3D>
+      )}
+    </article>
   );
 }

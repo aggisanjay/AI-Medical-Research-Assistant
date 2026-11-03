@@ -1,290 +1,178 @@
-import { useState, useEffect } from "react";
-import { 
-  Activity, Server, Database, Cpu, HardDrive, 
-  RefreshCw, CheckCircle2, ShieldCheck, Zap,
-  Coins, TrendingDown, Layers
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AlertTriangle, Clock, Coins, Cpu, Database, Gauge, HardDrive, Layers, RefreshCw, TrendingDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { Btn, ChartTip, Chip, Empty, Num, PageHead, Panel, PanelTitle, Skeleton, Stat } from "@/components/ui/kit";
+
+const dur = (s: number) => (s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} m` : `${Math.floor(s / 60)} m ${s % 60} s`);
 
 export function ObservabilityView() {
-  const [telemetry, setTelemetry] = useState<any | null>(null);
+  const [t, setT] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [at, setAt] = useState<Date | null>(null);
 
-  const fetchTelemetry = async () => {
+  const load = async (quiet = false) => {
     try {
-      setLoading(true);
+      if (!quiet) setLoading(true);
       const res = await api.getObservabilityTelemetry();
-      setTelemetry(res.telemetry);
+      setT(res.telemetry);
+      setAt(new Date());
     } catch (err: any) {
       toast.error(`Failed to load telemetry: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
-    fetchTelemetry();
-    const interval = setInterval(fetchTelemetry, 15000);
-    return () => clearInterval(interval);
+    load();
+    const id = setInterval(() => load(true), 15000);
+    return () => clearInterval(id);
   }, []);
 
+  const tok = t?.tokenAndCostAnalytics;
+  const sys = t?.system;
+  const wf = t?.agentWorkflows;
+  const recent: any[] = tok?.realtimeMetrics?.cumulative?.recentQueries ?? [];
+  const split = tok ? [{ name: "Prompt", value: tok.totalPromptTokens || 0, fill: "#38bdf8" }, { name: "Completion", value: tok.totalCompletionTokens || 0, fill: "#a78bfa" }] : [];
+  const hasTok = split.some((s) => s.value > 0);
+  const bars = recent.slice(-8).map((q, i) => ({ n: `#${i + 1}`, Prompt: q.promptTokens || 0, Completion: q.completionTokens || 0 }));
+  const heapPct = sys ? Math.round((sys.processHeapUsedMB / Math.max(1, sys.processHeapTotalMB)) * 100) : 0;
+  const memUsed = sys ? sys.totalMemMB - sys.freeMemMB : 0;
+  const memPct = sys ? Math.round((memUsed / Math.max(1, sys.totalMemMB)) * 100) : 0;
+
   return (
-    <div className="view-stagger space-y-6 animate-fade-in p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/8 pb-5">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-            <Activity className="h-4 w-4" /> Real-time System Telemetry
-          </div>
-          <h1 className="text-2xl font-serif font-bold text-white mt-1">Observability & Health Dashboard</h1>
-          <p className="text-xs text-slate-400 mt-1">
-            System latency, token estimation, memory allocation, database connectivity, and agent telemetry.
-          </p>
-        </div>
-        <button
-          onClick={fetchTelemetry}
-          disabled={loading}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-medium text-slate-300 transition-all"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-        </button>
+    <div className="view-stagger space-y-5 pb-12">
+      <PageHead
+        title="Observability"
+        description="Latency, token usage and system health. Refreshes every 15 seconds."
+        actions={
+          <>
+            {at && <span className="text-[12px] text-white/40">Updated {at.toLocaleTimeString()}</span>}
+            <Btn variant="secondary" size="sm" disabled={loading} onClick={() => load()} icon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />}>Refresh</Btn>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-3.5 lg:grid-cols-4">
+        <Stat loading={!t} label="Average latency" icon={Clock} color="#38bdf8" value={<><Num value={wf?.avgLatencyMs || 0} /><span className="ml-1 text-[13px] text-white/45">ms</span></>} hint="Per research query" />
+        <Stat loading={!t} label="Queries processed" icon={Gauge} color="#34d399" value={<Num value={wf?.totalProcessed || 0} />} hint="Since the server started or from the ledger" />
+        <Stat loading={!t} label="Error rate" icon={AlertTriangle} color={(wf?.errorRate || 0) > 0.05 ? "#f87171" : "#fbbf24"} value={<Num value={(wf?.errorRate || 0) * 100} decimals={1} suffix="%" />} hint={`${wf?.totalErrors || 0} failed runs`} />
+        <Stat loading={!t} label="Uptime" icon={Cpu} color="#a78bfa" value={<span className="text-[20px]">{sys ? dur(sys.uptimeSeconds) : "—"}</span>} hint="API process" />
       </div>
 
-      {telemetry && (
-        <div className="space-y-6">
-          {/* Top Scorecards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-xl bg-white/[0.02] border border-white/8 p-4 space-y-1">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Avg Query Latency</span>
-                <Zap className="h-3.5 w-3.5 text-amber-400" />
+      <div className="grid gap-3.5 lg:grid-cols-12">
+        <Panel className="lg:col-span-4">
+          <PanelTitle title="Token usage" hint="All recorded model calls" />
+          {!t ? <Skeleton className="h-48 w-full" /> : hasTok ? (
+            <>
+              <div className="relative mx-auto h-[160px] w-[160px]" role="img" aria-label="Prompt versus completion tokens">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={split} dataKey="value" nameKey="name" innerRadius={48} outerRadius={70} paddingAngle={3} stroke="none" animationDuration={900}>
+                      {split.map((s) => <Cell key={s.name} fill={s.fill} />)}
+                    </Pie>
+                    <Tooltip content={<ChartTip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+                  <div><div className="text-[20px] font-normal leading-none text-white"><Num value={tok.totalTokensConsumed || 0} /></div><div className="mt-1 text-[11px] text-white/50">tokens</div></div>
+                </div>
               </div>
-              <div className="text-2xl font-bold font-mono text-white">
-                {telemetry.agentWorkflows?.avgLatencyMs || 0}ms
-              </div>
-              <div className="text-[11px] text-slate-500">Across 9 agent steps</div>
-            </div>
+              <ul className="mt-3 space-y-2 text-[12.5px]">
+                {split.map((s) => (
+                  <li key={s.name} className="flex items-center gap-2.5"><i className="h-2 w-2 rounded-full" style={{ background: s.fill }} /><span className="text-white/80">{s.name}</span><span className="ml-auto tabular-nums text-white/60">{s.value.toLocaleString()}</span></li>
+                ))}
+              </ul>
+            </>
+          ) : <Empty icon={Coins} title="No usage yet" body="Token counts appear after the first model call." />}
+        </Panel>
 
-            <div className="rounded-xl bg-white/[0.02] border border-white/8 p-4 space-y-1">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Memory Allocation</span>
-                <HardDrive className="h-3.5 w-3.5 text-purple-400" />
+        <Panel className="lg:col-span-8">
+          <PanelTitle title="Cost" hint="Priced from the server's model catalog" right={tok && <Chip color="#34d399" dot={false}><TrendingDown className="h-3 w-3" />{tok.savingsFormatted} vs GPT-4o</Chip>} />
+          {!t ? <Skeleton className="h-48 w-full" /> : (
+            <>
+              <div className="mb-4 flex flex-wrap items-end gap-x-6 gap-y-2">
+                <div><div className="text-[12px] text-white/50">Total spend</div><div className="font-serif text-[28px] sm:text-[32px] font-light leading-none text-white">{tok?.costFormatted || "$0.00000"}</div></div>
+                <div><div className="text-[12px] text-white/50">Model calls</div><div className="text-[20px] font-normal text-white tabular-nums">{(tok?.realtimeMetrics?.cumulative?.queryCount ?? wf?.totalProcessed ?? 0).toLocaleString()}</div></div>
               </div>
-              <div className="text-2xl font-bold font-mono text-purple-400">
-                {telemetry.system?.processHeapUsedMB || 0} MB
-              </div>
-              <div className="text-[11px] text-slate-500">Node process heap used</div>
-            </div>
+              {bars.length > 0 ? (
+                <div className="h-[150px]" role="img" aria-label="Tokens for the most recent queries">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={bars} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barSize={18}>
+                      <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                      <XAxis dataKey="n" tickLine={false} axisLine={false} tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
+                      <Tooltip content={<ChartTip />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                      <Bar dataKey="Prompt" stackId="a" fill="#38bdf8" />
+                      <Bar dataKey="Completion" stackId="a" fill="#a78bfa" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <p className="text-[13px] text-white/40">Per-query bars appear after a few runs.</p>}
+            </>
+          )}
+        </Panel>
+      </div>
 
-            <div className="rounded-xl bg-white/[0.02] border border-white/8 p-4 space-y-1">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Pending Approvals</span>
-                <ShieldCheck className="h-3.5 w-3.5 text-teal-400" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-teal-400">
-                {telemetry.governanceAndApprovals?.pendingApprovalsCount || 0}
-              </div>
-              <div className="text-[11px] text-slate-500">
-                {telemetry.governanceAndApprovals?.totalAuditEventsLogged || 0} audit events
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-white/[0.02] border border-white/8 p-4 space-y-1">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Uptime</span>
-                <Server className="h-3.5 w-3.5 text-emerald-400" />
-              </div>
-              <div className="text-2xl font-bold font-mono text-emerald-400">
-                {Math.floor(telemetry.system?.uptimeSeconds / 60)}m {telemetry.system?.uptimeSeconds % 60}s
-              </div>
-              <div className="text-[11px] text-slate-500">Platform operational</div>
-            </div>
+      <Panel padded={false}>
+        <div className="px-4 pt-4 sm:px-5 sm:pt-5"><PanelTitle title="Recent model calls" hint="Most recent first" right={<Layers className="h-4 w-4 text-white/30" />} /></div>
+        {recent.length === 0 ? <Empty icon={Layers} title="No calls recorded" body="Each model call is logged with its tokens and exact cost." /> : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-[12.5px]">
+              <thead><tr className="border-y border-white/8 text-white/45">
+                {["Time", "Model", "Prompt", "Completion", "Cost", "Saved"].map((h, i) => <th key={h} className={`px-4 py-2.5 font-medium sm:px-5 ${i > 1 ? "text-right" : ""}`}>{h}</th>)}
+              </tr></thead>
+              <tbody className="divide-y divide-white/6">
+                {[...recent].slice(-8).reverse().map((q, i) => (
+                  <tr key={q.id || i} className="transition-colors hover:bg-white/[0.03]">
+                    <td className="px-4 py-2.5 text-white/50 sm:px-5">{new Date(q.timestamp).toLocaleTimeString()}</td>
+                    <td className="px-4 py-2.5 text-white sm:px-5">{q.model || "Not reported"} {q.provider && <span className="ml-2 rounded-md bg-white/8 px-1.5 py-0.5 text-[11px] text-white/55">{q.provider}</span>}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-sky-300 sm:px-6">{(q.promptTokens || 0).toLocaleString()}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-violet-300 sm:px-6">{(q.completionTokens || 0).toLocaleString()}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-white sm:px-6">{q.costFormatted}</td>
+                    <td className="px-5 py-3.5 text-right font-mono tabular-nums text-emerald-300 sm:px-6">{q.savingsFormatted}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        )}
+      </Panel>
 
-          {/* Real-Time Token & Financial Cost Analytics */}
-          {telemetry.tokenAndCostAnalytics && (
-            <div className="rounded-xl bg-gradient-to-br from-emerald-950/20 via-black to-teal-950/20 border border-emerald-500/20 p-5 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                    <Coins className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                      Real-Time Token & Financial Cost Analytics
-                      <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Tracking
-                      </span>
-                    </h3>
-                    <p className="text-[11px] text-slate-400">
-                      Granular token ledger across every multi-agent query, embedding generation, tool call, and evaluation.
-                    </p>
-                  </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel>
+          <PanelTitle title="Services" hint="Connectivity" />
+          {!t ? <Skeleton className="h-24 w-full" /> : (
+            <ul className="space-y-3">
+              {[["MongoDB", t.databases?.mongodb], ["Knowledge graph", t.databases?.knowledgeGraph]].map(([n, v]) => {
+                const ok = /connected|operational|ok|ready/i.test(String(v));
+                return (
+                  <li key={n} className="flex items-center gap-3 rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+                    <Database className="h-[18px] w-[18px] text-white/45" />
+                    <span className="text-[14.5px] text-white">{n}</span>
+                    <Chip color={ok ? "#34d399" : "#f87171"} className="ml-auto">{String(v)}</Chip>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+        <Panel>
+          <PanelTitle title="Runtime" hint="Server resources" right={<HardDrive className="h-5 w-5 text-white/30" />} />
+          {!sys ? <Skeleton className="h-28 w-full" /> : (
+            <div className="space-y-5">
+              {[["Process heap", `${sys.processHeapUsedMB} of ${sys.processHeapTotalMB} MB`, heapPct, "#38bdf8"], ["System memory", `${memUsed} of ${sys.totalMemMB} MB`, memPct, "#a78bfa"]].map(([l, v, p, c]) => (
+                <div key={l as string}>
+                  <div className="mb-1.5 flex justify-between text-[13.5px]"><span className="text-white/70">{l}</span><span className="tabular-nums text-white/50">{v}</span></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/8"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${p}%`, background: c as string }} /></div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Est. Total Spend</div>
-                    <div className="text-lg font-bold font-mono text-emerald-400">
-                      {telemetry.tokenAndCostAnalytics.costFormatted || "$0.00000"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cost Metric Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-                <div className="p-3.5 rounded-lg bg-black/60 border border-white/5">
-                  <div className="text-[11px] text-slate-400">Total Tokens</div>
-                  <div className="text-xl font-bold font-mono text-white mt-1">
-                    {(telemetry.tokenAndCostAnalytics.totalTokensConsumed || 0).toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Prompt + Completion</div>
-                </div>
-
-                <div className="p-3.5 rounded-lg bg-black/60 border border-white/5">
-                  <div className="text-[11px] text-slate-400">Prompt Tokens</div>
-                  <div className="text-xl font-bold font-mono text-cyan-400 mt-1">
-                    {(telemetry.tokenAndCostAnalytics.totalPromptTokens || 0).toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Context & RAG input</div>
-                </div>
-
-                <div className="p-3.5 rounded-lg bg-black/60 border border-white/5">
-                  <div className="text-[11px] text-slate-400">Completion Tokens</div>
-                  <div className="text-xl font-bold font-mono text-teal-400 mt-1">
-                    {(telemetry.tokenAndCostAnalytics.totalCompletionTokens || 0).toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Synthesis output</div>
-                </div>
-
-                <div className="p-3.5 rounded-lg bg-black/60 border border-emerald-500/20">
-                  <div className="text-[11px] text-emerald-400 flex items-center justify-between">
-                    <span>Saved vs GPT-4o</span>
-                    <TrendingDown className="h-3 w-3 text-emerald-400" />
-                  </div>
-                  <div className="text-xl font-bold font-mono text-emerald-400 mt-1">
-                    {telemetry.tokenAndCostAnalytics.savingsFormatted || "$0.00000"}
-                  </div>
-                  <div className="text-[10px] text-emerald-500/80 mt-0.5">Open-source & local efficiency</div>
-                </div>
-              </div>
-
-              {/* Recent Live Token Events Stream */}
-              {telemetry.tokenAndCostAnalytics.realtimeMetrics?.cumulative?.recentQueries?.length > 0 && (
-                <div className="space-y-2 pt-2">
-                  <div className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                    <Layers className="h-3.5 w-3.5 text-slate-400" /> Recent Real-Time Query Ledger
-                  </div>
-                  <div className="overflow-x-auto rounded-lg border border-white/5 bg-black/40">
-                    <table className="w-full text-left text-[11px] font-mono">
-                      <thead className="bg-white/[0.02] text-slate-400 border-b border-white/5">
-                        <tr>
-                          <th className="py-2 px-3 font-normal">Timestamp</th>
-                          <th className="py-2 px-3 font-normal">Model</th>
-                          <th className="py-2 px-3 font-normal">Provider</th>
-                          <th className="py-2 px-3 font-normal text-right">Prompt</th>
-                          <th className="py-2 px-3 font-normal text-right">Completion</th>
-                          <th className="py-2 px-3 font-normal text-right">Total Tok</th>
-                          <th className="py-2 px-3 font-normal text-right">Cost</th>
-                          <th className="py-2 px-3 font-normal text-right">Saved</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5 text-slate-300">
-                        {telemetry.tokenAndCostAnalytics.realtimeMetrics.cumulative.recentQueries
-                          .slice(-6)
-                          .reverse()
-                          .map((q: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                              <td className="py-2 px-3 text-slate-500">
-                                {new Date(q.timestamp).toLocaleTimeString()}
-                              </td>
-                              <td className="py-2 px-3 text-white font-medium">{q.model || "Mistral-7B"}</td>
-                              <td className="py-2 px-3">
-                                <span className="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 text-[10px]">
-                                  {q.provider || "local"}
-                                </span>
-                              </td>
-                              <td className="py-2 px-3 text-right text-cyan-400">
-                                {(q.promptTokens || 0).toLocaleString()}
-                              </td>
-                              <td className="py-2 px-3 text-right text-teal-400">
-                                {(q.completionTokens || 0).toLocaleString()}
-                              </td>
-                              <td className="py-2 px-3 text-right text-white font-bold">
-                                {(q.totalTokens || 0).toLocaleString()}
-                              </td>
-                              <td className="py-2 px-3 text-right text-emerald-400 font-bold">
-                                {q.costFormatted || "$0.00000"}
-                              </td>
-                              <td className="py-2 px-3 text-right text-emerald-400/80">
-                                {q.savingsUSD ? `+$${q.savingsUSD.toFixed(5)}` : "—"}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              ))}
+              <p className="text-[13px] text-white/40">Node {sys.nodeVersion} on {sys.platform} · {sys.cpuCores} cores</p>
             </div>
           )}
-
-          {/* Infrastructure Health */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-xl bg-white/[0.02] border border-white/8 p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Database className="h-4 w-4 text-teal-400" /> Data Storage & Graphs
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-black/40 border border-white/5">
-                  <div className="text-xs text-slate-300 font-medium">MongoDB Cluster</div>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px]">
-                    {telemetry.databases?.mongodb}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-black/40 border border-white/5">
-                  <div className="text-xs text-slate-300 font-medium">Clinical Knowledge Graph</div>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px]">
-                    Operational (Seeded)
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-black/40 border border-white/5">
-                  <div className="text-xs text-slate-300 font-medium">Vector Store Embeddings</div>
-                  <span className="px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20 text-[11px]">
-                    Local 384d Cosine
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-white/[0.02] border border-white/8 p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Cpu className="h-4 w-4 text-cyan-400" /> Host System Environment
-              </h3>
-              <div className="space-y-2 text-xs text-slate-400">
-                <div className="flex justify-between py-2 border-b border-white/5">
-                  <span>Runtime:</span>
-                  <span className="font-mono text-slate-200">{telemetry.system?.nodeVersion} ({telemetry.system?.platform})</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/5">
-                  <span>CPU Cores:</span>
-                  <span className="font-mono text-slate-200">{telemetry.system?.cpuCores} Cores Available</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-white/5">
-                  <span>Total System Memory:</span>
-                  <span className="font-mono text-slate-200">{telemetry.system?.totalMemMB} MB</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span>Free Host Memory:</span>
-                  <span className="font-mono text-slate-200">{telemetry.system?.freeMemMB} MB</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        </Panel>
+      </div>
     </div>
   );
 }

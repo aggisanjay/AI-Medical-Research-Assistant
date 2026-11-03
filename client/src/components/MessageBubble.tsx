@@ -1,322 +1,188 @@
-import { useState } from "react";
+import { useId, useState } from "react";
+import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { 
-  User, Sparkles, FileText, Coins, ChevronDown, Cpu, Zap, 
-  Activity, BookOpen, FlaskConical, MapPin, Copy, Check 
-} from "lucide-react";
+import { BookOpen, Check, Coins, Copy, FileText, FlaskConical, MapPin, Sparkles, User } from "lucide-react";
 import type { ChatMessage } from "@/lib/api";
 import { PublicationCard } from "./PublicationCard";
 import { ClinicalTrialCard } from "./ClinicalTrialCard";
 import { AgentWorkflowPanel } from "./AgentWorkflowPanel";
 import { ExecutiveSummaryCard } from "./ExecutiveSummaryCard";
+import { Btn, Chip, Panel } from "@/components/ui/kit";
+import { cn } from "@/lib/utils";
 
 interface Props {
   message: ChatMessage;
   onSuggestion?: (q: string) => void;
 }
 
-export function MessageBubble({ message, onSuggestion }: Props) {
-  const [showTokenDetails, setShowTokenDetails] = useState(false);
-  const [copied, setCopied] = useState(false);
+type Tab = "publications" | "trials" | "documents";
 
-  const handleCopy = () => {
-    if (message.content) {
-      navigator.clipboard.writeText(message.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+function Sources({ message }: { message: ChatMessage }) {
+  const id = useId();
+  const pubs = message.publications ?? [];
+  const trials = message.clinicalTrials ?? [];
+  const docs = message.documentChunks ?? [];
+  const tabs = ([
+    pubs.length > 0 && ["publications", "Publications", pubs.length, BookOpen],
+    trials.length > 0 && ["trials", "Clinical trials", trials.length, FlaskConical],
+    docs.length > 0 && ["documents", "Your documents", docs.length, FileText],
+  ].filter(Boolean) as [Tab, string, number, typeof BookOpen][]);
+  const [tab, setTab] = useState<Tab | null>(null);
+  if (!tabs.length) return null;
+  const active = tab ?? tabs[0][0];
+
+  return (
+    <section aria-label="Sources">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-[15px] font-medium text-white">Sources behind this answer</h3>
+        <span className="text-[13px] text-white/40">{pubs.length + trials.length + docs.length} total</span>
+      </div>
+      <div role="tablist" className="mb-4 flex gap-1 overflow-x-auto border-b border-white/10">
+        {tabs.map(([key, label, n, Icon]) => (
+          <button key={key} role="tab" aria-selected={active === key} onClick={() => setTab(key)} className={cn("relative flex shrink-0 items-center gap-2 px-4 py-3 text-[14px] transition-colors", active === key ? "text-white" : "text-white/50 hover:text-white/80")}>
+            <Icon className="h-4 w-4" />
+            {label}
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[12px] tabular-nums">{n}</span>
+            {active === key && <motion.span layoutId={`src-tab-${id}`} className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-sky-300" />}
+          </button>
+        ))}
+      </div>
+      {active === "publications" && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {pubs.map((p, i) => <PublicationCard key={i} pub={p} />)}
+        </div>
+      )}
+      {active === "trials" && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {trials.map((t, i) => <ClinicalTrialCard key={i} trial={t} />)}
+        </div>
+      )}
+      {active === "documents" && (
+        <div className="grid gap-3">
+          {docs.map((c, i) => (
+            <Panel key={i} className="!p-4">
+              <div className="flex items-center gap-2.5 text-[14px] text-white">
+                <FileText className="h-4 w-4 text-amber-300" />
+                <span className="truncate">{c.filename}</span>
+                <Chip color="#fbbf24" dot={false} className="ml-auto">{(c.score * 100).toFixed(0)}% match</Chip>
+              </div>
+              {c.excerpt && <p className="mt-2 line-clamp-2 text-[13.5px] leading-relaxed text-white/55">{c.excerpt}…</p>}
+            </Panel>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Cost({ message }: { message: ChatMessage }) {
+  const [open, setOpen] = useState(false);
+  const tc = message.tokenCost;
+  // Only real, server-reported usage is shown. Nothing is estimated here.
+  if (!tc || tc.isFallback) return null;
+  const total = Math.max(1, tc.totalTokens || 1);
+  const pPct = Math.round(((tc.promptTokens || 0) / total) * 100);
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-[13px] text-white/70 transition-colors hover:border-white/25 hover:text-white">
+        <Coins className="h-4 w-4 text-emerald-300" />
+        <span>{tc.costFormatted ?? `$${(tc.costUSD || 0).toFixed(5)}`}</span>
+        <span className="text-white/25">·</span>
+        <span className="tabular-nums">{(tc.totalTokens || 0).toLocaleString()} tokens</span>
+        {tc.model && (<><span className="text-white/25">·</span><span>{tc.model}</span></>)}
+        <span className="text-white/40">{open ? "Hide" : "Details"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[["Prompt", (tc.promptTokens || 0).toLocaleString(), "#38bdf8"], ["Completion", (tc.completionTokens || 0).toLocaleString(), "#a78bfa"], ["Total", (tc.totalTokens || 0).toLocaleString(), "#ffffff"], ["Cost", tc.costFormatted ?? `$${(tc.costUSD || 0).toFixed(5)}`, "#34d399"]].map(([l, v, c]) => (
+              <div key={l}>
+                <div className="text-[12.5px] text-white/45">{l}</div>
+                <div className="mt-0.5 font-mono text-[18px] tabular-nums" style={{ color: c }}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-white/8" aria-label={`Prompt ${pPct}%, completion ${100 - pPct}%`}>
+            <div className="h-full bg-sky-300" style={{ width: `${pPct}%` }} />
+            <div className="h-full bg-violet-300" style={{ width: `${100 - pPct}%` }} />
+          </div>
+          {(tc.savingsUSD ?? 0) > 0 && <p className="mt-3 text-[13px] text-emerald-200/80">About ${(tc.savingsUSD ?? 0).toFixed(5)} less than a GPT-4o baseline for the same tokens.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function MessageBubble({ message, onSuggestion }: Props) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    if (!message.content) return;
+    navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (message.role === "user") {
     const s = message.structuredInput;
-    const display =
-      message.content ||
-      [s?.disease, s?.query].filter(Boolean).join(" — ") ||
-      "(empty)";
+    const text = message.content || [s?.disease, s?.query].filter(Boolean).join(" — ") || "(empty)";
     return (
       <div className="flex justify-end">
-        <div className="flex items-start gap-3 max-w-[85%]">
-          <div className="rounded-3xl rounded-tr-md bg-[#121212] border border-white/8 px-5 py-3.5 text-xs sm:text-sm text-slate-100 shadow-sm">
-            <div className="font-normal leading-relaxed">{display}</div>
-            {s && (s.patientName || s.location) && (
-              <div className="mt-2.5 pt-2 border-t border-white/8 text-[11px] text-slate-400 flex flex-wrap items-center gap-3">
-                {s.patientName && (
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <User className="h-3 w-3 text-cyan-400" />
-                    <span>{s.patientName}</span>
-                  </span>
-                )}
-                {s.location && (
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <MapPin className="h-3 w-3 text-rose-400" />
-                    <span>{s.location}</span>
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#18181b] border border-white/10 text-slate-300">
-            <User className="h-4 w-4 text-slate-300" />
-          </div>
+        <div className="max-w-[88%] sm:max-w-[75%]">
+          <div className="rounded-2xl rounded-tr-md border border-white/12 bg-white/[0.07] px-4 py-2.5 text-[14px] leading-relaxed text-white">{text}</div>
+          {s && (s.patientName || s.location) && (
+            <div className="mt-2 flex flex-wrap justify-end gap-1.5">
+              {s.patientName && <Chip color="#38bdf8" dot={false}><User className="h-3.5 w-3.5" />{s.patientName}</Chip>}
+              {s.location && <Chip color="#f472b6" dot={false}><MapPin className="h-3.5 w-3.5" />{s.location}</Chip>}
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-start gap-3">
-      {/* Real AI Assistant Badge */}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-indigo-500/25 border border-cyan-500/30 text-cyan-400 shadow-sm shadow-cyan-500/10 mt-1">
-        <Sparkles className="h-4 w-4 text-cyan-300" />
-      </div>
-      <div className="flex-1 min-w-0 space-y-3.5">
+    <div className="flex items-start gap-3.5">
+      <span className="mt-1 hidden h-8.5 w-8.5 shrink-0 place-items-center rounded-lg border border-sky-300/25 bg-sky-300/10 text-sky-200 sm:grid">
+        <Sparkles className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1 space-y-4">
+        {message.workflowSteps && message.workflowSteps.length > 0 && <AgentWorkflowPanel steps={message.workflowSteps} collapsible defaultExpanded={false} />}
 
-        {message.workflowSteps && message.workflowSteps.length > 0 && (
-          <AgentWorkflowPanel
-            steps={message.workflowSteps}
-            collapsible
-            defaultExpanded={false}
-          />
-        )}
-
-        {/* Main AI Answer Bubble */}
-        {message.role === "assistant" && message.responseMode === "executive" ? (
+        {message.responseMode === "executive" ? (
           <ExecutiveSummaryCard message={message} />
         ) : (
-          <div className="editorial-card px-4 sm:px-5 py-4 border border-white/8 relative overflow-hidden bg-[#0d0d0f]/90 shadow-sm">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2.5 mb-3 text-[11px] text-slate-400 flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-medium text-[10px]">
-                  <Sparkles className="h-3 w-3 text-cyan-400" /> Clinical Research Dossier
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">NCBI & Trial Grounded</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-[10px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer border border-white/5"
-                title="Copy clinical synthesis to clipboard"
-              >
-                {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3 text-slate-400" />}
-                <span>{copied ? "Copied" : "Copy Dossier"}</span>
-              </button>
-            </div>
-            <div className="prose-research max-w-none text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+          <article className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5 sm:px-5">
+              <span className="flex items-center gap-2 text-[13.5px] font-medium text-white">
+                <FileText className="h-4 w-4 text-sky-300" /> Research report
+              </span>
+              <Btn size="sm" variant="ghost" onClick={copy} icon={copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}>
+                {copied ? "Copied" : "Copy report"}
+              </Btn>
+            </header>
+            <div className="prose-research max-w-none px-4 py-4 text-[14px] leading-relaxed text-white/80 sm:px-5 sm:py-5">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{sanitizeReportMarkdown(message.content)}</ReactMarkdown>
             </div>
-          </div>
+          </article>
         )}
 
-        {/* Real-time Token Cost & Compute Breakdown with Interactive Click-to-Inspect */}
-        {(() => {
-          const tc = message.tokenCost || (message.role === "assistant" && message.content ? {
-            promptTokens: Math.max(850, Math.round((message.content.length / 4) * 1.6)),
-            completionTokens: Math.max(150, Math.round(message.content.length / 4)),
-            totalTokens: Math.max(1000, Math.round(message.content.length / 4 * 2.6)),
-            costUSD: parseFloat(((Math.max(1000, message.content.length / 4 * 2.6) / 1000000) * 0.55).toFixed(5)),
-            costFormatted: `$${((Math.max(1000, message.content.length / 4 * 2.6) / 1000000) * 0.55).toFixed(5)}`,
-            savingsUSD: parseFloat(((Math.max(1000, message.content.length / 4 * 2.6) / 1000000) * 4.5).toFixed(5)),
-            model: "Groq Qwen-3.8-27B",
-            provider: "groq"
-          } : undefined);
+        <Cost message={message} />
+        <Sources message={message} />
 
-          if (!tc) return null;
-
-          return (
-            <div className="space-y-2 pt-0.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowTokenDetails(!showTokenDetails)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 hover:border-emerald-500/50 hover:bg-emerald-500/15 text-[10px] font-mono text-emerald-400 transition-all cursor-pointer group"
-                  title="Click to inspect exact prompt, completion, and cost breakdown"
-                >
-                  <Coins className="h-3 w-3 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
-                  <span>Cost: <strong className="text-white">{tc.costFormatted}</strong></span>
-                  <span className="text-slate-600">|</span>
-                  <span className="text-slate-300">{tc.totalTokens.toLocaleString()} tokens</span>
-                  {tc.model && (
-                    <>
-                      <span className="text-slate-600">|</span>
-                      <span className="text-emerald-300/80">{tc.model}</span>
-                    </>
-                  )}
-                  <span className="ml-1 text-[9px] text-emerald-400/70 border border-emerald-500/20 rounded px-1.5 py-0.5 group-hover:text-emerald-300 bg-black/30">
-                    {showTokenDetails ? "Hide ▲" : "Inspect Tokens ▼"}
-                  </span>
-                </button>
-
-                {(tc.savingsUSD ?? 0) > 0 && (
-                  <span className="text-[10px] font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-800/30 px-2.5 py-0.5 rounded-full">
-                    Saved ~${(tc.savingsUSD ?? 0).toFixed(5)} vs GPT-4o
-                  </span>
-                )}
-              </div>
-
-              {/* Expanded interactive breakdown on click */}
-              {showTokenDetails && (
-                <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-black/60 backdrop-blur-sm space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2 text-[11px]">
-                    <span className="font-semibold text-white flex items-center gap-1.5">
-                      <Cpu className="h-3.5 w-3.5 text-emerald-400" /> AI API Request Token Breakdown
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      Engine: <strong className="text-white">{tc.model || "Groq Qwen-3.8-27B"}</strong> ({tc.provider || "groq"})
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
-                      <div className="text-[10px] text-slate-400">Prompt Tokens</div>
-                      <div className="text-base font-bold font-mono text-cyan-400 mt-0.5">
-                        {(tc.promptTokens || 0).toLocaleString()}
-                      </div>
-                      <div className="text-[9px] text-slate-500 mt-0.5">Context, Citations & RAG</div>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
-                      <div className="text-[10px] text-slate-400">Completion Tokens</div>
-                      <div className="text-base font-bold font-mono text-teal-400 mt-0.5">
-                        {(tc.completionTokens || 0).toLocaleString()}
-                      </div>
-                      <div className="text-[9px] text-slate-500 mt-0.5">Report synthesis output</div>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
-                      <div className="text-[10px] text-slate-400">Total Tokens</div>
-                      <div className="text-base font-bold font-mono text-white mt-0.5">
-                        {(tc.totalTokens || 0).toLocaleString()}
-                      </div>
-                      <div className="text-[9px] text-slate-500 mt-0.5">Prompt + Completion</div>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                      <div className="text-[10px] text-emerald-400">Request Cost</div>
-                      <div className="text-base font-bold font-mono text-emerald-400 mt-0.5">
-                        {tc.costFormatted || `$${(tc.costUSD || 0).toFixed(5)}`}
-                      </div>
-                      <div className="text-[9px] text-emerald-500/80 mt-0.5">
-                        {(tc.savingsUSD ?? 0) > 0 ? `Saved $${(tc.savingsUSD ?? 0).toFixed(5)}` : "Free Tier"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Token Ratio Meter */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                      <span className="text-cyan-400">Prompt: {Math.round(((tc.promptTokens || 0) / Math.max(1, tc.totalTokens || 1)) * 100)}%</span>
-                      <span className="text-teal-400">Completion: {Math.round(((tc.completionTokens || 0) / Math.max(1, tc.totalTokens || 1)) * 100)}%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden flex">
-                      <div
-                        className="bg-cyan-400 h-full"
-                        style={{ width: `${Math.round(((tc.promptTokens || 0) / Math.max(1, tc.totalTokens || 1)) * 100)}%` }}
-                      />
-                      <div
-                        className="bg-teal-400 h-full"
-                        style={{ width: `${Math.round(((tc.completionTokens || 0) / Math.max(1, tc.totalTokens || 1)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-        {message.documentChunks && message.documentChunks.length > 0 && (
-          <Section title="Uploaded Document Sources" count={message.documentChunks.length} icon={FileText}>
-            <div className="space-y-2">
-              {message.documentChunks.map((chunk, i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3"
-                >
-                  <div className="flex items-center gap-2 text-[10px] font-semibold text-white">
-                    <FileText className="h-3.5 w-3.5 text-slate-400" />
-                    {chunk.filename}
-                    <span className="text-slate-400 font-mono ml-auto">
-                      {(chunk.score * 100).toFixed(0)}% match
-                    </span>
-                  </div>
-                  {chunk.excerpt && (
-                    <p className="mt-1.5 text-[11px] text-slate-400 font-normal leading-relaxed line-clamp-2">
-                      {chunk.excerpt}…
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* Publications Grid */}
-        {message.publications && message.publications.length > 0 && (
-          <Section title="PubMed & OpenAlex Citations" count={message.publications.length} icon={BookOpen}>
-            <div className="grid sm:grid-cols-2 gap-3.5">
-              {message.publications.map((p, i) => (
-                <PublicationCard key={i} pub={p} />
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* Clinical Trials Grid */}
-        {message.clinicalTrials && message.clinicalTrials.length > 0 && (
-          <Section title="Matched Clinical Registries" count={message.clinicalTrials.length} icon={FlaskConical}>
-            <div className="grid sm:grid-cols-2 gap-3.5">
-              {message.clinicalTrials.map((t, i) => (
-                <ClinicalTrialCard key={i} trial={t} />
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* Suggested Follow-up Questions */}
         {message.suggestedQuestions && message.suggestedQuestions.length > 0 && (
-          <div className="pt-1">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2.5">
-              <Sparkles className="h-3 w-3 text-cyan-400" />
-              Suggested Clinical Queries
-            </div>
+          <section aria-label="Follow-up questions">
+            <h3 className="mb-2.5 text-[14px] font-medium text-white">Keep going</h3>
             <div className="flex flex-wrap gap-2">
               {message.suggestedQuestions.map((q, i) => (
-                <button
-                  key={i}
-                  onClick={() => onSuggestion?.(q)}
-                  className="text-left text-xs px-3.5 py-2 rounded-full border border-white/8 bg-[#0a0a0a] hover:border-cyan-500/30 hover:bg-cyan-950/20 text-slate-300 hover:text-white transition-all cursor-pointer font-normal"
-                >
+                <button key={i} onClick={() => onSuggestion?.(q)} className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 text-left text-[13px] text-white/80 transition-all hover:border-sky-300/50 hover:bg-sky-300/10 hover:text-white">
                   {q}
                 </button>
               ))}
             </div>
-          </div>
+          </section>
         )}
       </div>
-    </div>
-  );
-}
-
-function Section({ 
-  title, 
-  count, 
-  icon: Icon, 
-  children 
-}: { 
-  title: string; 
-  count: number; 
-  icon?: any; 
-  children: React.ReactNode 
-}) {
-  return (
-    <div className="space-y-2.5">
-      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 ml-1">
-        {Icon && <Icon className="h-3.5 w-3.5 text-cyan-400 shrink-0" />}
-        {title}
-        <span className="text-[10px] px-2 py-0.5 bg-[#121212] border border-white/8 rounded-full text-slate-300 font-mono">{count}</span>
-      </div>
-      {children}
     </div>
   );
 }

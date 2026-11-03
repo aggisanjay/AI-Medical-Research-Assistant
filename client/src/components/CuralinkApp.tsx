@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { 
   Sparkles, FlaskConical, BookOpen, 
-  Globe, Bell, HelpCircle, 
-  ShieldCheck, AlertCircle, Coins
+  Globe, ShieldCheck, AlertCircle, Coins, Menu
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { StructuredInput } from "@/components/StructuredInput";
@@ -18,6 +17,7 @@ import {
   type DocumentSummary,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { Btn, Chip } from "@/components/ui/kit";
 
 import { DashboardView } from "@/components/DashboardView";
 import { SettingsView } from "@/components/SettingsView";
@@ -26,14 +26,24 @@ import { KnowledgeGraphView } from "@/components/KnowledgeGraphView";
 import { ObservabilityView } from "@/components/ObservabilityView";
 import { useAuth, useUser, useClerk, Show, UserButton } from "@clerk/react";
 
+const TAB_TITLES: Record<string, string> = {
+  dashboard: "Overview",
+  chat: "Research workspace",
+  documents: "Documents",
+  "knowledge-graph": "Knowledge graph",
+  observability: "Observability",
+  settings: "Settings",
+};
+
 export function CuralinkApp() {
   const { isLoaded, isSignedIn, user } = useUser();
   const { getToken } = useAuth();
   const { signOut } = useClerk();
 
   const reduceMotion = useReducedMotion();
+  const [mobileNav, setMobileNav] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const userName = user?.fullName || "Dr. Sarah Jenkins";
+  const userName = user?.fullName || "Account";
 
   // Centralized History States
   const [conversations, setConversations] = useState<any[]>([]);
@@ -85,107 +95,6 @@ export function CuralinkApp() {
   }, [messages, sending, activeTab, workflowSteps]);
 
   // Live real-time multi-agent progression & ticker while query is generating
-  useEffect(() => {
-    if (!sending) return;
-
-    const startTime = Date.now();
-
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-
-      // Phase 1: Research Agent (0ms -> ~3000ms)
-      if (elapsed < 3000) {
-        setWorkflowSteps([
-          {
-            agent: "Research Agent",
-            status: "running",
-            durationMs: elapsed,
-            metadata: {
-              currentAction: elapsed < 1200 
-                ? "Expanding medical synonyms & query concepts" 
-                : "Federating search across PubMed, OpenAlex & ClinicalTrials.gov",
-              targetDatabases: "PubMed · OpenAlex · ClinicalTrials.gov",
-              activeTimer: `${(elapsed / 1000).toFixed(1)}s`,
-            },
-          },
-          {
-            agent: "Evidence Agent",
-            status: "pending",
-            durationMs: 0,
-          },
-          {
-            agent: "Summary Agent",
-            status: "pending",
-            durationMs: 0,
-          },
-        ]);
-      } 
-      // Phase 2: Evidence Agent (3000ms -> ~5000ms)
-      else if (elapsed < 5000) {
-        setWorkflowSteps([
-          {
-            agent: "Research Agent",
-            status: "completed",
-            durationMs: 3000,
-            metadata: {
-              status: "Literature & clinical trial records retrieved successfully",
-              retrievalStatus: "Complete",
-            },
-          },
-          {
-            agent: "Evidence Agent",
-            status: "running",
-            durationMs: elapsed - 3000,
-            metadata: {
-              currentAction: "Cross-validating study methodology & computing confidence score",
-              scoringModel: "100-Point Evidence Index",
-              activeTimer: `${((elapsed - 3000) / 1000).toFixed(1)}s`,
-            },
-          },
-          {
-            agent: "Summary Agent",
-            status: "pending",
-            durationMs: 0,
-          },
-        ]);
-      } 
-      // Phase 3: Summary Agent (> 5000ms until backend response completes)
-      else {
-        setWorkflowSteps([
-          {
-            agent: "Research Agent",
-            status: "completed",
-            durationMs: 3000,
-            metadata: {
-              status: "Literature & clinical trial records retrieved successfully",
-              retrievalStatus: "Complete",
-            },
-          },
-          {
-            agent: "Evidence Agent",
-            status: "completed",
-            durationMs: 2000,
-            metadata: {
-              status: "Ranked evidence & validated clinical confidence",
-              confidenceIndex: "High",
-            },
-          },
-          {
-            agent: "Summary Agent",
-            status: "running",
-            durationMs: elapsed - 5000,
-            metadata: {
-              currentAction: "Synthesizing clinical findings, trial matching & structured report",
-              reasoningEngine: "Curalink Medical Reasoning LLM",
-              activeTimer: `${((elapsed - 5000) / 1000).toFixed(1)}s`,
-            },
-          },
-        ]);
-      }
-    }, 75);
-
-    return () => clearInterval(interval);
-  }, [sending]);
 
   // Centralized fetch conversations list
   const fetchConversations = () => {
@@ -256,11 +165,7 @@ export function CuralinkApp() {
   const handleSubmit = async (payload: SendMessagePayload) => {
     setSending(true);
     setError(null);
-    setWorkflowSteps([
-      { agent: "Research Agent", status: "running", durationMs: 0 },
-      { agent: "Evidence Agent", status: "pending", durationMs: 0 },
-      { agent: "Summary Agent", status: "pending", durationMs: 0 },
-    ]);
+    setWorkflowSteps([]);
     const optimistic: ChatMessage = {
       role: "user",
       content:
@@ -361,70 +266,63 @@ export function CuralinkApp() {
   };
 
   const renderChatWorkspace = () => {
+    const starters = [
+      { q: "Latest immunotherapy approaches for stage IV melanoma", icon: FlaskConical, color: "#34d399" },
+      { q: "Osimertinib trial outcomes in EGFR-mutant NSCLC", icon: BookOpen, color: "#38bdf8" },
+      { q: "CAR-T advances in relapsed lymphoma", icon: Globe, color: "#a78bfa" },
+      { q: "Trastuzumab deruxtecan in HER2-low breast cancer", icon: ShieldCheck, color: "#38bdf8" },
+    ];
     return (
       <div className="flex-1 flex flex-col min-h-0 relative">
-        <div ref={scrollerRef} className="flex-1 overflow-y-auto min-h-0 bg-black">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[55vh] max-w-2xl mx-auto px-4 py-8 text-center space-y-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/25 via-blue-500/20 to-indigo-600/30 border border-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/10">
-                <Sparkles className="h-6 w-6 text-cyan-300" />
+        <div ref={scrollerRef} className="flex-1 overflow-y-auto min-h-0">
+          {messages.length === 0 && !sending ? (
+            <div className="mx-auto flex min-h-[60vh] max-w-3xl flex-col items-center justify-center px-5 py-12 text-center">
+              <span className="mb-6 grid h-14 w-14 place-items-center rounded-2xl border border-sky-300/25 bg-sky-300/10 text-sky-200">
+                <Sparkles className="h-7 w-7" />
+              </span>
+              <h1 className="font-serif text-[clamp(32px,4.4vw,52px)] font-light leading-[1.05] tracking-[-0.02em] text-white">What would you like to investigate?</h1>
+              <p className="mt-4 max-w-xl text-[15.5px] leading-relaxed text-white/55">
+                CuraLink searches PubMed, OpenAlex and ClinicalTrials.gov, then checks every citation against what it retrieved.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+                <Chip color="#38bdf8">PubMed</Chip>
+                <Chip color="#a78bfa">OpenAlex</Chip>
+                <Chip color="#34d399">ClinicalTrials.gov</Chip>
               </div>
-              <div className="space-y-1.5">
-                <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight text-white">
-                  Start a New Investigation
-                </h1>
-                <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed font-normal">
-                  Enter your clinical query below. Curalink's 9-agent system federates searches across PubMed, OpenAlex, and ClinicalTrials.gov to generate structured evidence briefs.
-                </p>
-              </div>
-              <div className="w-full pt-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-2.5">
-                  Suggested Clinical Investigations
-                </div>
-                <div className="grid sm:grid-cols-2 gap-2 text-left">
-                  {[
-                    { q: "Latest immunotherapy approaches for stage IV melanoma", icon: FlaskConical, color: "text-emerald-400" },
-                    { q: "Osimertinib clinical trial outcomes in EGFR-mutant NSCLC", icon: BookOpen, color: "text-blue-400" },
-                    { q: "Recent CAR-T cell therapy advancements in relapsed lymphoma", icon: Globe, color: "text-purple-400" },
-                    { q: "Trastuzumab deruxtecan in HER2-low metastatic breast cancer", icon: ShieldCheck, color: "text-cyan-400" }
-                  ].map(({ q, icon: Icon, color }) => (
-                    <button
-                      key={q}
-                      onClick={() => handleSubmit({ message: q })}
-                      className="group flex items-center gap-3 rounded-2xl border border-white/8 bg-[#0a0a0a] hover:border-cyan-500/30 hover:bg-[#121216] p-3 text-xs transition-all duration-200 text-slate-300 hover:text-white cursor-pointer text-left shadow-sm"
-                    >
-                      <div className="h-7 w-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                        <Icon className={`h-3.5 w-3.5 ${color}`} />
-                      </div>
-                      <span className="truncate font-normal">{q}</span>
+              <div className="mt-10 w-full text-left">
+                <p className="mb-3 text-[14px] text-white/50">Try one of these</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {starters.map(({ q, icon: Icon, color }) => (
+                    <button key={q} onClick={() => handleSubmit({ message: q })} className="group flex items-start gap-3.5 rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06]">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: color + "18", color }}>
+                        <Icon className="h-[17px] w-[17px]" />
+                      </span>
+                      <span className="text-[14.5px] leading-snug text-white/85">{q}</span>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-4">
+            <div className="mx-auto max-w-4xl space-y-8 px-4 py-8 sm:px-8">
               {messages.map((m, i) => (
                 <MessageBubble key={i} message={m} onSuggestion={handleSuggestion} />
               ))}
-              {sending && (
-                <div>
-                  <AgentWorkflowPanel steps={workflowSteps} isLoading />
-                </div>
-              )}
+              {sending && <AgentWorkflowPanel steps={[]} isLoading />}
             </div>
           )}
         </div>
 
-        <div className="border-t border-white/8 bg-black/95 backdrop-blur-md px-4 sm:px-6 py-2.5 shrink-0">
-          <div className="max-w-5xl mx-auto">
+        <div className="shrink-0 border-t border-white/8 bg-[#050508]/90 px-4 py-4 backdrop-blur-md sm:px-8">
+          <div className="mx-auto max-w-4xl">
             {error && (
-              <div className="mb-2 text-xs text-red-400 bg-red-950/30 border border-red-900/30 rounded-xl px-3 py-2 flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-red-300">Pipeline Alert</div>
-                  <div className="text-[10px] mt-0.5 text-red-400/90 font-normal">{error}</div>
+              <div role="alert" className="mb-3 flex items-start gap-3 rounded-2xl border border-red-400/30 bg-red-400/[0.07] px-4 py-3.5">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14.5px] font-medium text-red-100">The run could not finish</p>
+                  <p className="mt-0.5 break-words text-[13.5px] text-red-200/80">{error}</p>
                 </div>
+                <Btn size="sm" variant="ghost" onClick={() => setError(null)}>Dismiss</Btn>
               </div>
             )}
             <StructuredInput
@@ -434,8 +332,8 @@ export function CuralinkApp() {
               selectedDocumentIds={selectedDocumentIds}
               onDocumentIdsChange={setSelectedDocumentIds}
             />
-            <p className="mt-1.5 text-[9px] text-slate-500 text-center font-normal">
-              Curalink aggregates open access data. Validate critical mutations with peer-reviewed oncology teams.
+            <p className="mt-2.5 text-center text-[12.5px] text-white/35">
+              CuraLink is a research aid, not medical advice. Verify important findings with a qualified clinician.
             </p>
           </div>
         </div>
@@ -464,91 +362,84 @@ export function CuralinkApp() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-black text-slate-100 font-sans overflow-hidden">
-      <Sidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        activeId={conversationId}
-        onSelect={handleSelectConversation}
-        onNew={handleNew}
-        items={conversations}
-        loading={loadingConversations}
-        onDelete={handleDeleteConversation}
-        onLogout={handleLogout}
-        refreshKey={refreshKey}
-      />
+    <div className="flex h-screen w-full bg-[#050508] text-slate-100 font-sans overflow-hidden">
+      {/* Desktop sidebar */}
+      <div className="hidden h-full lg:block">
+        <Sidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          activeId={conversationId}
+          onSelect={handleSelectConversation}
+          onNew={handleNew}
+          items={conversations}
+          loading={loadingConversations}
+          onDelete={handleDeleteConversation}
+          onLogout={handleLogout}
+          refreshKey={refreshKey}
+        />
+      </div>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileNav && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileNav(false)} />
+            <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="fixed inset-y-0 left-0 z-50 h-full lg:hidden">
+              <Sidebar
+                activeTab={activeTab}
+                onTabChange={(t) => { setActiveTab(t); setMobileNav(false); }}
+                activeId={conversationId}
+                onSelect={(id) => { handleSelectConversation(id); setMobileNav(false); }}
+                onNew={() => { handleNew(); setMobileNav(false); }}
+                items={conversations}
+                loading={loadingConversations}
+                onDelete={handleDeleteConversation}
+                onLogout={handleLogout}
+                refreshKey={refreshKey}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-13 border-b border-white/8 bg-black px-4 sm:px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-[11px] text-slate-300 font-medium flex items-center gap-1.5 bg-[#0a0a0a] border border-white/8 px-2.5 py-1 rounded-full shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Clinical Terminal
-            </span>
-
-            {activeTab === "chat" && (
-              <div className="hidden sm:flex items-center gap-2 pl-2.5 border-l border-white/10 min-w-0">
-                <h2 className="text-xs font-serif font-bold text-white truncate">
-                  {messages.length > 0 ? "Research Conversation" : "New Investigation"}
-                </h2>
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#121212] border border-white/10 text-slate-400 font-mono shrink-0">
-                  {messages.length} {messages.length === 1 ? "msg" : "msgs"}
-                </span>
-              </div>
+        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-white/8 bg-[#050508] px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button onClick={() => setMobileNav(true)} aria-label="Open menu" className="-ml-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/75 hover:bg-white/8 lg:hidden">
+              <Menu className="h-5 w-5" />
+            </button>
+            <h2 className="truncate text-[15px] font-medium text-white">{TAB_TITLES[activeTab] ?? "Workspace"}</h2>
+            {activeTab === "chat" && messages.length > 0 && (
+              <span className="hidden shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[12px] text-white/55 sm:inline">
+                {messages.length} {messages.length === 1 ? "message" : "messages"}
+              </span>
             )}
           </div>
-
-          <div className="flex items-center gap-2.5">
-            {activeTab === "chat" && (
-              <div className="hidden xl:flex items-center gap-1.5 text-[9px] text-slate-400 font-medium mr-1">
-                <Pill icon={BookOpen} label="PubMed" />
-                <Pill icon={Globe} label="OpenAlex" />
-                <Pill icon={FlaskConical} label="ClinicalTrials.gov" />
-              </div>
-            )}
-
-            {/* Real-time Token & Cost Live Ticker */}
-            <div 
+          <div className="flex items-center gap-3">
+            <button
               onClick={() => setActiveTab("observability")}
-              title="Real-time Token & Cost Tracker — Click to view Observability metrics"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-mono text-emerald-400 hover:bg-emerald-500/15 cursor-pointer transition-colors"
+              title="Session usage. Open Observability for the full ledger."
+              className="flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5 text-[12.5px] text-white/75 transition-colors hover:border-white/25 hover:text-white"
             >
-              <Coins className="h-3 w-3 text-emerald-400 shrink-0" />
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="font-semibold text-white">{realtimeCost}</span>
-              <span className="text-slate-500 hidden sm:inline">|</span>
-              <span className="text-emerald-300/80 hidden sm:inline">{realtimeTokens.toLocaleString()} tok</span>
-            </div>
-
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0a0a0a] border border-white/8 text-[9px] text-slate-300 font-medium">
-              <ShieldCheck className="h-3 w-3 text-slate-400" />
-              HIPAA Encrypted
-            </div>
-
-            <button className="p-1.5 rounded-full border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white transition-colors relative cursor-pointer">
-              <Bell className="h-3 w-3" />
+              <Coins className="h-3.5 w-3.5 text-emerald-300" />
+              <span className="tabular-nums">{realtimeCost}</span>
+              <span className="hidden text-white/30 sm:inline">·</span>
+              <span className="hidden tabular-nums text-white/55 sm:inline">{realtimeTokens.toLocaleString()} tokens</span>
             </button>
-
-            <button className="p-1.5 rounded-full border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white transition-colors cursor-pointer">
-              <HelpCircle className="h-3 w-3" />
-            </button>
-
-            {/* Profile Dropdown */}
-            <div className="flex items-center gap-2 pl-2 border-l border-white/8 py-0.5">
+            <div className="flex items-center gap-2.5 border-l border-white/10 pl-3">
               <Show when="signed-in">
                 <UserButton />
               </Show>
-              <span className="hidden lg:inline-block text-xs font-medium text-slate-300 truncate max-w-[120px]">
-                {userName}
-              </span>
+              <span className="hidden max-w-[140px] truncate text-[13px] text-white/75 lg:inline">{userName}</span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 flex min-h-0 relative bg-black">
+
+        <div className="flex-1 flex min-h-0 relative bg-[#050508]">
           <main className={cn(
             "flex-1 min-w-0",
-            activeTab === "chat" ? "overflow-hidden flex flex-col" : "overflow-y-auto px-4 sm:px-6 py-6"
+            activeTab === "chat" ? "overflow-hidden flex flex-col" : "overflow-y-auto px-4 sm:px-6 lg:px-8 py-6"
           )}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -557,7 +448,7 @@ export function CuralinkApp() {
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
                 transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-                className={activeTab === "chat" ? "flex-1 flex flex-col min-h-0" : "max-w-6xl mx-auto"}
+                className={activeTab === "chat" ? "flex-1 flex flex-col min-h-0" : "max-w-[1360px] mx-auto w-full"}
               >
                 {renderContentView()}
               </motion.div>
@@ -566,14 +457,5 @@ export function CuralinkApp() {
         </div>
       </div>
     </div>
-  );
-}
-
-function Pill({ icon: Icon, label }: { icon: any; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0a0a0a] border border-white/8 text-slate-400">
-      <Icon className="h-3 w-3 text-white" />
-      {label}
-    </span>
   );
 }

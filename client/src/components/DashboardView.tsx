@@ -1,26 +1,8 @@
-import { useState, useEffect } from "react";
-import { 
-  BookOpen, FileText, Search, Sparkles, Plus, 
-  ChevronRight, ArrowUpRight, Gauge, Database, History,
-  Hourglass, TrendingUp
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ArrowUpRight, BookOpen, Clock, Database, FileText, FlaskConical, Gauge, History, MessageSquare, Plus, Search, Upload } from "lucide-react";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend
-} from "recharts";
+import { Btn, ChartTip, Chip, Empty, Num, Panel, PanelTitle, PageHead, Skeleton, Stat, sourceColor } from "@/components/ui/kit";
 
 interface DashboardViewProps {
   items: any[];
@@ -30,415 +12,247 @@ interface DashboardViewProps {
   onSearchSuggest: (query: string) => void;
 }
 
-export function DashboardView({ 
-  items, loading, onNavigate, onSelectConversation, onSearchSuggest 
-}: DashboardViewProps) {
+const SUGGESTED = [
+  { q: "Latest immunotherapy approaches for stage IV melanoma", icon: FlaskConical, color: "#34d399" },
+  { q: "Osimertinib trial outcomes in EGFR-mutant NSCLC", icon: BookOpen, color: "#38bdf8" },
+  { q: "CAR-T advances in relapsed lymphoma", icon: Search, color: "#a78bfa" },
+  { q: "Trastuzumab deruxtecan in HER2-low breast cancer", icon: Search, color: "#38bdf8" },
+];
+
+function timeAgo(iso?: string) {
+  if (!iso) return "";
+  const s = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  return `${Math.floor(s / 86400)} d ago`;
+}
+
+export function DashboardView({ items, loading, onNavigate, onSelectConversation, onSearchSuggest }: DashboardViewProps) {
   const [analytics, setAnalytics] = useState<any>(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+  const [busy, setBusy] = useState(true);
 
   useEffect(() => {
-    api.getAnalytics()
-      .then((res) => {
-        if (res.success) {
-          setAnalytics(res.data);
-        }
-      })
-      .catch((err) => console.error("Error loading analytics:", err))
-      .finally(() => setLoadingAnalytics(false));
+    let alive = true;
+    api
+      .getAnalytics()
+      .then((res) => alive && res.success && setAnalytics(res.data))
+      .catch(() => {})
+      .finally(() => alive && setBusy(false));
+    return () => {
+      alive = false;
+    };
   }, [items]);
 
-  const metrics = analytics?.metrics || {
-    sourcesRetrieved: 0,
-    citationsGenerated: 0,
-    researchSessions: 0,
-    documentsUploaded: 0,
-    averageConfidenceScore: 0
+  const m = analytics?.metrics;
+  const distribution: { name: string; value: number }[] = analytics?.distribution ?? [];
+  const exec: { name: string; duration: number }[] = analytics?.executionTimes ?? [];
+  const timeline: { year: number; count: number }[] = analytics?.timeline ?? [];
+  const totalSources = distribution.reduce((a, d) => a + d.value, 0);
+  const hasDist = totalSources > 0;
+  const hasTimeline = timeline.some((t) => t.count > 0);
+  const hasExec = exec.some((e) => e.duration > 0);
+  const score = m?.averageConfidenceScore ? Number(m.averageConfidenceScore) : 0;
+
+  const execData = useMemo(() => [...exec].sort((a, b) => b.duration - a.duration), [exec]);
+
+  const go = (id: string) => {
+    onSelectConversation(id);
+    onNavigate("chat");
   };
-
-  const distributionData = analytics?.distribution || [
-    { name: "PubMed", value: 0 },
-    { name: "OpenAlex", value: 0 },
-    { name: "ClinicalTrials", value: 0 }
-  ];
-
-  const executionTimesData = analytics?.executionTimes || [
-    { name: "Research Agent", duration: 0 },
-    { name: "Evidence Agent", duration: 0 },
-    { name: "Summary Agent", duration: 0 }
-  ];
-
-  const timelineData = analytics?.timeline || [
-    { year: 2022, count: 0 },
-    { year: 2023, count: 0 },
-    { year: 2024, count: 0 },
-    { year: 2025, count: 0 },
-    { year: 2026, count: 0 }
-  ];
-
-  // Colors mapping for charts (monochrome & minimal blue accent)
-  const COLORS = {
-    PubMed: "#ffffff",
-    OpenAlex: "#2563EB",
-    ClinicalTrials: "#71717a"
-  };
-
-  const statCards = [
-    {
-      title: "Sources Retrieved",
-      value: metrics.sourcesRetrieved.toLocaleString(),
-      desc: "Gross database responses",
-      icon: Database,
-    },
-    {
-      title: "Citations Generated",
-      value: metrics.citationsGenerated.toLocaleString(),
-      desc: "Peer-reviewed citations mapped",
-      icon: BookOpen,
-    },
-    {
-      title: "Research Sessions",
-      value: metrics.researchSessions.toString(),
-      desc: "Investigations logged",
-      icon: History,
-    },
-    {
-      title: "Documents Uploaded",
-      value: metrics.documentsUploaded.toString(),
-      desc: "Ingested semantic TXT/PDFs",
-      icon: FileText,
-    },
-    {
-      title: "Evidence Grounding Score",
-      value: `${metrics.averageConfidenceScore || 88}%`,
-      desc: "Empirical Citation & Grounding Index",
-      icon: Gauge,
-    }
-  ];
-
-  const quickActions = [
-    {
-      title: "New Investigation",
-      desc: "Begin an empty clinical workspace research flow",
-      icon: Plus,
-      action: () => {
-        onSelectConversation("");
-        onNavigate("chat");
-      },
-    },
-    {
-      title: "Query Literature",
-      desc: "Ask standard questions on immunotherapy and CAR-T",
-      icon: Sparkles,
-      action: () => {
-        onNavigate("chat");
-      },
-    }
-  ];
 
   return (
-    <div className="view-stagger space-y-8 pb-16">
-      
-      {/* Greeting Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/8 pb-6">
-        <div>
-          <h1 className="text-3xl font-serif font-bold tracking-tight text-white">
-            Evidence Analytics
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 font-normal mt-1">
-            Real-time tracking of multi-agent execution times, source distributions, and database metrics.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            onClick={() => {
-              onSelectConversation("");
-              onNavigate("chat");
-            }}
-            size="default"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Investigation
-          </Button>
-        </div>
+    <div className="view-stagger space-y-5 pb-12">
+      <PageHead
+        title="Overview"
+        description="Your research activity and the evidence behind it. Numbers here come from your own investigations and uploads."
+        actions={
+          <>
+            <Btn variant="secondary" size="sm" icon={<Upload className="h-3.5 w-3.5" />} onClick={() => onNavigate("documents")}>
+              Upload document
+            </Btn>
+            <Btn variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => go("")}>
+              New investigation
+            </Btn>
+          </>
+        }
+      />
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-3.5 lg:grid-cols-5">
+        <Stat loading={busy} label="Sources retrieved" icon={Database} color="#38bdf8" value={<Num value={m?.sourcesRetrieved ?? 0} />} hint="Papers and trials returned" />
+        <Stat loading={busy} label="Citations generated" icon={BookOpen} color="#a78bfa" value={<Num value={m?.citationsGenerated ?? 0} />} hint="References in your reports" />
+        <Stat loading={busy} label="Research sessions" icon={History} color="#34d399" value={<Num value={m?.researchSessions ?? 0} />} hint="Investigations logged" />
+        <Stat loading={busy} label="Documents" icon={FileText} color="#fbbf24" value={<Num value={m?.documentsUploaded ?? 0} />} hint="Uploaded to your workspace" />
+        <Stat
+          loading={busy}
+          label="Grounding score"
+          icon={Gauge}
+          color="#f472b6"
+          value={score > 0 ? <Num value={score} suffix="%" /> : <span className="text-white/35">No data</span>}
+          hint="Claims matched to a source"
+        />
       </div>
 
-      {/* Universal Search Box */}
-      <div className="editorial-card p-2 border border-white/8">
-        <div className="flex items-center gap-3 bg-black/60 border border-white/8 rounded-2xl px-4 py-3 focus-within:border-white/20 transition-all">
-          <Search className="h-4 w-4 text-slate-500 shrink-0" />
-          <input 
-            type="text" 
-            placeholder="Search publications, clinical trials, or ask a research question (e.g. Stage IV Melanoma CAR-T)..."
-            className="flex-1 bg-transparent text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none min-w-0 font-normal"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && e.currentTarget.value.trim()) {
-                onSearchSuggest(e.currentTarget.value);
-                e.currentTarget.value = "";
-              }
-            }}
-          />
-          <kbd className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-[#18181b] border border-white/10 text-[10px] font-mono text-slate-400 uppercase">
-            Enter
-          </kbd>
-        </div>
-      </div>
-
-      {/* Analytics KPI Widgets Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {statCards.map((card, i) => {
-          const Icon = card.icon;
-          return (
-            <div key={i} className="editorial-card p-5 border border-white/8 flex flex-col justify-between hover:border-white/20 transition-all duration-200">
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">{card.title}</span>
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white">
-                  <Icon className="h-3.5 w-3.5" />
+      {/* Charts */}
+      <div className="grid gap-3.5 lg:grid-cols-12">
+        <Panel className="lg:col-span-5">
+          <PanelTitle title="Evidence by source" hint="Where retrieved records came from" />
+          {busy ? (
+            <Skeleton className="h-52 w-full" />
+          ) : hasDist ? (
+            <div className="flex flex-col items-center gap-4 sm:flex-row">
+              <div className="relative h-[180px] w-[180px] shrink-0" role="img" aria-label="Evidence by source">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={distribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={80} paddingAngle={3} stroke="none" animationDuration={900}>
+                      {distribution.map((d) => (
+                        <Cell key={d.name} fill={sourceColor(d.name)} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+                  <div>
+                    <div className="text-[22px] font-normal leading-none text-white">
+                      <Num value={totalSources} />
+                    </div>
+                    <div className="mt-1 text-[11px] text-white/50">records</div>
+                  </div>
                 </div>
               </div>
-
-              <div className="mt-4">
-                <span className="text-2xl sm:text-3xl font-serif font-bold text-white block">
-                  {loadingAnalytics ? "..." : card.value}
-                </span>
-                <span className="text-[10px] text-slate-500 font-normal mt-1 block">
-                  {card.desc}
-                </span>
-              </div>
+              <ul className="w-full space-y-2">
+                {distribution.map((d) => (
+                  <li key={d.name} className="flex items-center gap-2.5 text-[13px]">
+                    <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: sourceColor(d.name) }} />
+                    <span className="text-white/85">{d.name}</span>
+                    <span className="ml-auto tabular-nums text-white/60">{d.value.toLocaleString()}</span>
+                    <span className="w-9 text-right tabular-nums text-white/35">{Math.round((d.value / totalSources) * 100)}%</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          );
-        })}
+          ) : (
+            <Empty icon={Database} title="No sources yet" body="Run an investigation and the registries it searched will be broken down here." />
+          )}
+        </Panel>
+
+        <Panel className="lg:col-span-7">
+          <PanelTitle title="Publications by year" hint="Publication years of the literature you retrieved" />
+          {busy ? (
+            <Skeleton className="h-52 w-full" />
+          ) : hasTimeline ? (
+            <div className="h-[200px]" role="img" aria-label="Publications by year">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeline} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="tl" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.45} />
+                      <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                  <XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
+                  <YAxis tickLine={false} axisLine={false} allowDecimals={false} tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
+                  <Tooltip content={<ChartTip />} cursor={{ stroke: "rgba(255,255,255,0.2)" }} />
+                  <Area type="monotone" dataKey="count" name="Publications" stroke="#38bdf8" strokeWidth={2} fill="url(#tl)" animationDuration={1000} dot={{ r: 2.5, fill: "#38bdf8", strokeWidth: 0 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <Empty icon={BookOpen} title="No publications yet" body="After your first investigation this chart shows how recent the evidence is." />
+          )}
+        </Panel>
       </div>
 
-      {/* Visual Analytics Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Chart A: Source Distribution */}
-        <div className="editorial-card p-5 border border-white/8 flex flex-col h-[320px]">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5">
-            <Database className="h-3.5 w-3.5 text-white" />
-            Source Distribution
-          </h3>
-          <div className="flex-1 min-h-0 relative">
-            {loadingAnalytics ? (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-xs">Loading charts...</div>
-            ) : distributionData.reduce((sum: number, d: any) => sum + d.value, 0) === 0 ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 text-xs gap-1">
-                <span>No source data retrieved yet</span>
-                <span className="text-[10px] text-slate-600">Queries in Workspace mode will populate this card</span>
-              </div>
-            ) : (
+      <div className="grid gap-3.5 lg:grid-cols-12">
+        <Panel className="lg:col-span-5">
+          <PanelTitle title="Where time goes" hint="Average time per pipeline stage" right={<Chip color="#94a3b8" dot={false}>ms</Chip>} />
+          {busy ? (
+            <Skeleton className="h-52 w-full" />
+          ) : hasExec ? (
+            <div className="h-[195px]" role="img" aria-label="Average time per stage in milliseconds">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={distributionData}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={55}
-                    outerRadius={75}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {distributionData.map((entry: any, index: number) => {
-                      const color = COLORS[entry.name as keyof typeof COLORS] || "#52525b";
-                      return <Cell key={`cell-${index}`} fill={color} />;
-                    })}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px", color: "#fff" }}
-                  />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    iconSize={8}
-                    formatter={(value) => <span className="text-[10px] text-slate-300 font-normal">{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Chart B: Multi-Agent Execution Time */}
-        <div className="editorial-card p-5 border border-white/8 flex flex-col h-[320px]">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <Hourglass className="h-3.5 w-3.5 text-white" />
-              Multi-Agent Execution Runtimes (ms)
-            </span>
-            <span className="text-[10px] text-slate-500 font-mono">Real-time Measured</span>
-          </h3>
-          <div className="flex-1 min-h-0 relative">
-            {loadingAnalytics ? (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-xs">Loading charts...</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={executionTimesData} margin={{ top: 10, right: 10, left: -20, bottom: 25 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="#71717a" 
-                    fontSize={8} 
-                    tickLine={false} 
-                    interval={0}
-                    angle={-20}
-                    textAnchor="end"
-                  />
-                  <YAxis stroke="#71717a" fontSize={9} tickLine={false} />
-                  <Tooltip 
-                    cursor={{ fill: "rgba(255,255,255,0.03)" }}
-                    contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px", color: "#fff" }}
-                    formatter={(val: any) => [`${val} ms`, "Avg Runtime"]}
-                  />
-                  <Bar dataKey="duration" fill="#2563EB" radius={[4, 4, 0, 0]} maxBarSize={32} minPointSize={5}>
-                    {executionTimesData.map((_entry: any, index: number) => {
-                      const colors = ["#2563EB", "#38bdf8", "#34d399", "#a78bfa", "#f59e0b", "#ec4899", "#10b981", "#6366f1"];
-                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                    })}
+                <BarChart data={execData} layout="vertical" margin={{ top: 0, right: 14, left: 0, bottom: 0 }} barSize={13}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
+                  <XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={124} tickLine={false} axisLine={false} tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11.5 }} />
+                  <Tooltip content={<ChartTip unit=" ms" />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+                  <Bar dataKey="duration" name="Duration" radius={[0, 6, 6, 0]} animationDuration={900}>
+                    {execData.map((_, i) => (
+                      <Cell key={i} fill={["#38bdf8", "#a78bfa", "#34d399", "#fbbf24", "#f472b6"][i % 5]} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Chart C: Publication Timeline */}
-        <div className="editorial-card p-5 border border-white/8 flex flex-col h-[320px]">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5 text-white" />
-            Publications by Year
-          </h3>
-          <div className="flex-1 min-h-0 relative">
-            {loadingAnalytics ? (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-xs">Loading charts...</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={timelineData} margin={{ top: 10, right: 15, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                  <XAxis dataKey="year" stroke="#71717a" fontSize={9} tickLine={false} />
-                  <YAxis stroke="#71717a" fontSize={9} tickLine={false} allowDecimals={false} />
-                  <Tooltip 
-                    contentStyle={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px", color: "#fff" }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="count" 
-                    stroke="#2563EB" 
-                    strokeWidth={2}
-                    dot={{ r: 3, stroke: "#2563EB", strokeWidth: 1.5, fill: "#000000" }}
-                    activeDot={{ r: 5 }} 
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-      </div>
-
-      {/* Quick Actions & Recent Activity Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Recent Activity Table */}
-        <div className="lg:col-span-2 editorial-card p-6 border border-white/8">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-serif font-bold text-white">Recent Activity</h3>
-            <button 
-              onClick={() => onNavigate("chat")} 
-              className="text-xs font-medium text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              View Workspace
-              <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-white/8 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
-                  <th className="pb-3">Investigation Name</th>
-                  <th className="pb-3">Scope ID</th>
-                  <th className="pb-3">Updated At</th>
-                  <th className="pb-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/8 text-xs font-normal">
-                {loading && (
-                  <tr>
-                    <td colSpan={4} className="py-6 text-center text-slate-500">
-                      Loading clinical records...
-                    </td>
-                  </tr>
-                )}
-                {!loading && items.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="py-6 text-center text-slate-500 italic">
-                      No clinical research records found in this user session.
-                    </td>
-                  </tr>
-                )}
-                {!loading && items.slice(0, 5).map((conv) => (
-                  <tr 
-                    key={conv.conversationId} 
-                    className="hover:bg-white/5 transition-all cursor-pointer group"
-                    onClick={() => {
-                      onSelectConversation(conv.conversationId);
-                      onNavigate("chat");
-                    }}
-                  >
-                    <td className="py-3.5 font-medium text-white pr-3 max-w-[200px] truncate">
-                      {conv.disease || conv.patientName || "Clinical Investigation"}
-                    </td>
-                    <td className="py-3.5 text-slate-500 font-mono text-[10px]">
-                      {conv.conversationId.substring(0, 8)}...
-                    </td>
-                    <td className="py-3.5 text-slate-400">
-                      {new Date(conv.updatedAt).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 text-right">
-                      <span className="text-[11px] font-semibold text-[#2563EB] group-hover:underline inline-flex items-center gap-0.5">
-                        Resume
-                        <ArrowUpRight className="h-3 w-3" />
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Quick Actions Panel */}
-        <div className="editorial-card p-6 border border-white/8 flex flex-col justify-between">
-          <div className="space-y-4">
-            <h3 className="text-sm font-serif font-bold text-white">Workspace Actions</h3>
-            <div className="space-y-3">
-              {quickActions.map((action, i) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={i}
-                    onClick={action.action}
-                    className="w-full text-left p-3.5 rounded-2xl border border-white/8 bg-black/40 hover:border-white/20 transition-all flex items-center gap-3 group cursor-pointer"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 border border-white/10 text-white group-hover:bg-[#2563EB] transition-colors">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium text-white group-hover:text-white transition-colors">{action.title}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{action.desc}</div>
-                    </div>
-                  </button>
-                );
-              })}
             </div>
-          </div>
+          ) : (
+            <Empty icon={Clock} title="No timings yet" body="Stage durations are recorded each time the pipeline runs." />
+          )}
+        </Panel>
 
-          <div className="border-t border-white/8 pt-4 mt-4 text-[10px] text-slate-500 text-center font-normal leading-relaxed">
-            HIPAA Audit Active · Compliance logs active in session.
+        <Panel className="lg:col-span-7" padded={false}>
+          <div className="px-4 pt-4 sm:px-5 sm:pt-5">
+            <PanelTitle
+              title="Recent investigations"
+              hint="Pick up where you left off"
+              right={
+                items.length > 0 ? (
+                  <Btn size="sm" variant="ghost" onClick={() => onNavigate("chat")} icon={<ArrowUpRight className="h-3 w-3" />}>
+                    Open workspace
+                  </Btn>
+                ) : undefined
+              }
+            />
           </div>
-        </div>
-
+          {loading ? (
+            <div className="space-y-2.5 px-4 pb-5 sm:px-5">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : items.length === 0 ? (
+            <Empty icon={MessageSquare} title="No investigations yet" body="Start one from the suggestions below, or write your own question." action={<Btn variant="primary" size="sm" onClick={() => go("")}>Start an investigation</Btn>} />
+          ) : (
+            <ul className="divide-y divide-white/8 border-t border-white/8">
+              {items.slice(0, 5).map((c) => (
+                <li key={c.conversationId}>
+                  <button onClick={() => go(c.conversationId)} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] sm:px-5">
+                    <span className="grid h-8.5 w-8.5 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.04] text-sky-300">
+                      <MessageSquare className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13.5px] text-white">{c.disease || c.patientName || "Investigation"}</span>
+                      <span className="mt-0.5 block truncate text-[12px] text-white/45">{c.lastMessage || `${c.messageCount} messages`}</span>
+                    </span>
+                    <span className="shrink-0 text-right text-[11.5px] text-white/40">
+                      {timeAgo(c.updatedAt)}
+                      <span className="block">{c.messageCount} msgs</span>
+                    </span>
+                    <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-white/30 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
       </div>
 
+      {/* Start here */}
+      <div>
+        <h2 className="mb-2.5 text-[14px] font-medium text-white/80">Start with a question</h2>
+        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+          {SUGGESTED.map(({ q, icon: Icon, color }) => (
+            <button key={q} onClick={() => onSearchSuggest(q)} className="group flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-white/22 hover:bg-white/[0.06]">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg" style={{ background: color + "18", color }}>
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="text-[13px] leading-snug text-white/85">{q}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
