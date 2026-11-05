@@ -61,7 +61,10 @@ class ClinicalTrialsService {
     const allTrials = [];
 
     try {
-      const { condition, intervention, location } = expandedQuery.clinicalTrialsQuery;
+      const ctQuery = expandedQuery?.clinicalTrialsQuery || {};
+      const condition = ctQuery.condition || expandedQuery?.disease || expandedQuery?.primaryQuery || (typeof expandedQuery === 'string' ? expandedQuery : '');
+      const intervention = ctQuery.intervention;
+      const location = ctQuery.location || expandedQuery?.location;
 
       if (condition) {
         const trials = await this._fetch({

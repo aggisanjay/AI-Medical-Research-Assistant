@@ -3,7 +3,8 @@ const axios = require('axios');
 class OpenAlexService {
   constructor() {
     this.baseUrl = 'https://api.openalex.org/works';
-    this.email = 'curalink@research.ai'; // polite pool
+    this.email = 'research@curalink.io'; // polite pool
+    this._rateLimitedUntil = 0;
   }
 
   /**
@@ -14,30 +15,45 @@ class OpenAlexService {
     const { maxResults = 100, fromYear = 2018 } = options;
     const allResults = [];
 
+    // Check if OpenAlex is currently cooling down from a 429
+    if (Date.now() < this._rateLimitedUntil) {
+      console.log('📚 OpenAlex: Temporary rate-limit cooldown active; skipping to rely on PubMed & Trials');
+      return [];
+    }
+
     try {
-      // Strategy: Multiple queries for breadth
-      const queries = expandedQuery.expandedQueries.slice(0, 4);
-      if (!queries.length) queries.push(expandedQuery.primaryQuery);
+      // Strategy: Multiple queries for breadth, safely extracted
+      const queries = (
+        Array.isArray(expandedQuery?.expandedQueries)
+          ? expandedQuery.expandedQueries.slice(0, 3)
+          : typeof expandedQuery === 'string'
+            ? [expandedQuery]
+            : [expandedQuery?.primaryQuery || expandedQuery?.query || expandedQuery?.disease].filter(Boolean)
+      );
+
+      if (!queries.length && expandedQuery?.primaryQuery) {
+        queries.push(expandedQuery.primaryQuery);
+      }
+
+      if (!queries.length) {
+        return [];
+      }
 
       const perQueryLimit = Math.ceil(maxResults / queries.length);
 
-      const fetchPromises = queries.map(query =>
-        this._fetchPage(query, Math.min(perQueryLimit, 200), fromYear)
-      );
-
-      const results = await Promise.allSettled(fetchPromises);
-
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value) {
-          allResults.push(...result.value);
+      for (const query of queries) {
+        if (Date.now() < this._rateLimitedUntil) break;
+        const pageResults = await this._fetchPage(query, Math.min(perQueryLimit, 50), fromYear);
+        if (pageResults.length > 0) {
+          allResults.push(...pageResults);
         }
       }
 
       // Deduplicate by DOI or title
       const seen = new Set();
       const deduplicated = allResults.filter(pub => {
-        const key = pub.doi || pub.title.toLowerCase().substring(0, 80);
-        if (seen.has(key)) return false;
+        const key = pub.doi || (pub.title || '').toLowerCase().substring(0, 80);
+        if (!key || seen.has(key)) return false;
         seen.add(key);
         return true;
       });
@@ -55,18 +71,39 @@ class OpenAlexService {
     const url = `${this.baseUrl}`;
     const params = {
       search: query,
-      'per-page': Math.min(perPage, 200),
+      'per-page': Math.min(perPage, 50),
       page: 1,
       sort: 'relevance_score:desc',
       filter: `from_publication_date:${fromYear}-01-01`,
       mailto: this.email
     };
 
-    const response = await axios.get(url, { params, timeout: 15000 });
+    if (process.env.OPENALEX_API_KEY) {
+      params.api_key = process.env.OPENALEX_API_KEY;
+    }
 
-    if (!response.data || !response.data.results) return [];
+    try {
+      const response = await axios.get(url, {
+        params,
+        headers: {
+          'User-Agent': 'CuraLink/1.0 (mailto:research@curalink.io)'
+        },
+        timeout: 10000
+      });
 
-    return response.data.results.map(work => this._transformWork(work));
+      if (!response.data || !response.data.results) return [];
+
+      return response.data.results.map(work => this._transformWork(work));
+    } catch (err) {
+      if (err.response?.status === 429) {
+        // OpenAlex rate limit: cool down for 60 seconds
+        this._rateLimitedUntil = Date.now() + 60000;
+        console.warn('📚 OpenAlex: Anonymous search rate-limited by OpenAlex cluster (429). Falling back to PubMed.');
+      } else {
+        console.warn(`📚 OpenAlex fetch warning: ${err.message}`);
+      }
+      return [];
+    }
   }
 
   _transformWork(work) {

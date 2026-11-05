@@ -5,6 +5,7 @@ class PubmedService {
   constructor() {
     this.searchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi';
     this.fetchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi';
+    this.summaryUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi';
     this.xmlParser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_'
@@ -69,42 +70,191 @@ class PubmedService {
   }
 
   async _searchIds(query, retMax) {
-    const params = {
-      db: 'pubmed',
-      term: query,
-      retmax: Math.min(retMax, 200),
-      sort: 'pub+date',
-      retmode: 'json'
-    };
+    const cleanQuery = typeof query === 'string' ? query.trim() : '';
+    if (!cleanQuery) return [];
 
-    const response = await axios.get(this.searchUrl, { params, timeout: 10000 });
-    return response.data?.esearchresult?.idlist || [];
+    const targetMax = Math.min(Math.max(retMax || 20, 10), 100);
+
+    // Tier 1: Try official NCBI ESearch API
+    try {
+      const params = {
+        db: 'pubmed',
+        term: cleanQuery,
+        retmax: targetMax,
+        retmode: 'json',
+        tool: 'curalink_research',
+        email: 'research@curalink.io'
+      };
+
+      if (process.env.NCBI_API_KEY) {
+        params.api_key = process.env.NCBI_API_KEY;
+      }
+
+      const response = await axios.get(this.searchUrl, {
+        params,
+        headers: {
+          'User-Agent': 'CuraLink/1.0 (mailto:research@curalink.io)'
+        },
+        timeout: 4000
+      });
+
+      const idList = response.data?.esearchresult?.idlist;
+      if (Array.isArray(idList) && idList.length > 0) {
+        return idList;
+      }
+    } catch (err) {
+      console.warn(`PubMed ESearch API transient error (${err.message}). Using PubMed search gateway...`);
+    }
+
+    // Tier 2: PubMed Web Search Gateway (fast, resilient, returns exact real-time PMIDs)
+    try {
+      const sizeParam = targetMax <= 10 ? 10 : targetMax <= 20 ? 20 : targetMax <= 50 ? 50 : 100;
+      const webRes = await axios.get('https://pubmed.ncbi.nlm.nih.gov/', {
+        params: {
+          term: cleanQuery,
+          size: sizeParam
+        },
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        },
+        timeout: 10000
+      });
+
+      const html = webRes.data || '';
+      const idSet = new Set();
+
+      // Extract search-result-selector-<pmid>
+      const selectorMatches = html.match(/search-result-selector-([0-9]+)/g) || [];
+      selectorMatches.forEach(m => idSet.add(m.replace('search-result-selector-', '')));
+
+      // Extract data-article-id="<pmid>"
+      const articleIdMatches = html.match(/data-article-id=["']?([0-9]+)["']?/g) || [];
+      articleIdMatches.forEach(m => {
+        const digits = m.replace(/[^0-9]/g, '');
+        if (digits) idSet.add(digits);
+      });
+
+      // Extract <span class="docsum-pmid"><pmid></span>
+      const docsumMatches = html.match(/class=["']docsum-pmid["']>([0-9]+)</g) || [];
+      docsumMatches.forEach(m => {
+        const digits = m.replace(/[^0-9]/g, '');
+        if (digits) idSet.add(digits);
+      });
+
+      if (idSet.size > 0) {
+        return [...idSet].slice(0, targetMax);
+      }
+    } catch (webErr) {
+      console.warn(`PubMed Web gateway error: ${webErr.message}`);
+    }
+
+    // Tier 3: PubMed Central (PMC) index fallback
+    try {
+      const pmcRes = await axios.get(this.searchUrl, {
+        params: {
+          db: 'pmc',
+          term: cleanQuery,
+          retmax: Math.min(targetMax, 50),
+          retmode: 'json'
+        },
+        headers: {
+          'User-Agent': 'CuraLink/1.0 (mailto:research@curalink.io)'
+        },
+        timeout: 4000
+      });
+      const pmcIds = pmcRes.data?.esearchresult?.idlist;
+      if (Array.isArray(pmcIds) && pmcIds.length > 0) {
+        return pmcIds;
+      }
+    } catch (pmcErr) {
+      // PMC fallback silent
+    }
+
+    return [];
   }
 
   async _fetchDetails(pmids) {
-    const batchSize = 50;
+    const batchSize = 25;
     const allPublications = [];
 
     for (let i = 0; i < pmids.length; i += batchSize) {
       const batch = pmids.slice(i, i + batchSize);
       try {
+        const params = {
+          db: 'pubmed',
+          id: batch.join(','),
+          retmode: 'xml'
+        };
+        if (process.env.NCBI_API_KEY) {
+          params.api_key = process.env.NCBI_API_KEY;
+        }
+
         const response = await axios.get(this.fetchUrl, {
-          params: {
-            db: 'pubmed',
-            id: batch.join(','),
-            retmode: 'xml'
+          params,
+          headers: {
+            'User-Agent': 'CuraLink/1.0 (mailto:research@curalink.io)'
           },
           timeout: 15000
         });
 
         const articles = this._parseXml(response.data);
-        allPublications.push(...articles);
+        if (articles.length > 0) {
+          allPublications.push(...articles);
+        } else {
+          // If XML parse yielded 0, try summary fallback for this batch
+          const summaries = await this._fetchSummaryDetails(batch);
+          allPublications.push(...summaries);
+        }
       } catch (error) {
-        console.error(`PubMed batch fetch error: ${error.message}`);
+        console.warn(`PubMed batch fetch warning (${error.message}). Trying ESummary fallback...`);
+        const summaries = await this._fetchSummaryDetails(batch);
+        allPublications.push(...summaries);
       }
     }
 
     return allPublications;
+  }
+
+  async _fetchSummaryDetails(batch) {
+    try {
+      const response = await axios.get(this.summaryUrl, {
+        params: {
+          db: 'pubmed',
+          id: batch.join(','),
+          retmode: 'json'
+        },
+        headers: {
+          'User-Agent': 'CuraLink/1.0 (mailto:research@curalink.io)'
+        },
+        timeout: 12000
+      });
+      const result = response.data?.result || {};
+      const uids = result.uids || [];
+      return uids.map(uid => {
+        const doc = result[uid];
+        if (!doc) return null;
+        const authors = (doc.authors || []).map(a => a.name).filter(Boolean);
+        const year = parseInt((doc.pubdate || '').substring(0, 4)) || new Date().getFullYear();
+        return {
+          title: (doc.title || 'Untitled').replace(/<[^>]*>/g, ''),
+          abstract: (doc.source || doc.title || '').replace(/<[^>]*>/g, ''),
+          authors,
+          year,
+          source: 'PubMed',
+          url: `https://pubmed.ncbi.nlm.nih.gov/${uid}/`,
+          pmid: String(uid),
+          journal: doc.source || doc.fulljournalname || 'PubMed Journal',
+          citationCount: 1,
+          concepts: [],
+          relevanceScore: 0.5,
+          openAccess: false
+        };
+      }).filter(Boolean);
+    } catch (err) {
+      console.error(`PubMed summary fallback error: ${err.message}`);
+      return [];
+    }
   }
 
   _parseXml(xmlData) {
